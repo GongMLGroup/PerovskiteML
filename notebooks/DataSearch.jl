@@ -63,7 +63,7 @@ end;
 
 # ╔═╡ dcbea5ae-c02d-4511-851a-7ae458660da6
 begin
-	sparsity_plot = heatmap(data_matrix, color=:grays, colorbar=false, framestyle=:box, dpi=1000, yflip=true)
+	sparsity_plot = heatmap(data_matrix, color=:grays, colorbar=false, framestyle=:box, dpi=300, yflip=true)
 	yticks!(0:5000:40000, [string(i) for i in 0:5000:40000])
 	xticks!(0:50:400)
 end
@@ -90,7 +90,7 @@ end
 # ╔═╡ ae5f0ec5-0207-4da3-a01c-6fcc2c25a9fc
 begin
 	sparsity_sorted_matrix = filterData(sparsity_sorted_data)
-	sparsity_plot_2 = heatmap(sparsity_sorted_matrix, color=:grays, colorbar=false, framestyle=:box, dpi=1000, yflip=true)
+	sparsity_plot_2 = heatmap(sparsity_sorted_matrix, color=:grays, colorbar=false, framestyle=:box, dpi=300, yflip=true)
 	yticks!(0:5000:40000, [string(i) for i in 0:5000:40000])
 	xticks!(0:50:400)
 end
@@ -103,8 +103,8 @@ begin
 	function multi_input()
 		return combine() do Child
 			inputs = [
-				md""" Max Papers: $(Child("lower", NumberField(0:43252, default=1))) """,
-				md""" Min Papers: $(Child("upper", NumberField(0:43252, default=100))) """
+				md""" Min Papers: $(Child("lower", NumberField(0:43252, default=1))) """,
+				md""" Max Papers: $(Child("upper", NumberField(0:43252, default=100))) """
 			]
 			
 			md"""
