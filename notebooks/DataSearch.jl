@@ -100,11 +100,11 @@ plot(1:1:410, sorted_counts, xlabel="Column Index", ylabel="Number of Papers Rep
 
 # ╔═╡ fe78c4e5-f2e1-43a7-b3b3-40bb9833de62
 begin
-	function multi_input()
+	function multi_input(lower, upper, range, defaults)
 		return combine() do Child
 			inputs = [
-				md""" Min Papers: $(Child("lower", NumberField(0:43252, default=1))) """,
-				md""" Max Papers: $(Child("upper", NumberField(0:43252, default=100))) """
+				md""" $(lower): $(Child("lower", NumberField(range, default=defaults[1]))) """,
+				md""" $(upper): $(Child("upper", NumberField(range, default=defaults[2]))) """
 			]
 			
 			md"""
@@ -119,7 +119,7 @@ begin
 end
 
 # ╔═╡ a6ef6b1b-fefc-4854-8fdf-e6a6ca9c9c98
-@bind sparsity_range multi_input()
+@bind sparsity_range multi_input("Min Paper", "Max Papers", 0:43252, [1, 100])
 
 # ╔═╡ 8eee05a3-5671-4f23-bd26-2b7112a879bb
 sparsity_range_indices = let
@@ -193,19 +193,65 @@ end
 # ╔═╡ fc5b6da8-cad9-4e51-860e-f52acf6638df
 DataFrame("Unique Values" => unique_values_copy, "Count" => counts_copy)
 
+# ╔═╡ 14596c47-b5e9-4011-abfa-e6f5f85acc09
+function order_of_magnitude(x::Real)
+	return floor(log10(abs(x)))
+end;
+
+# ╔═╡ 163ca386-68fe-4c81-ad36-0c3bf30583be
+# Check if the unique values are numbers
+if eltype([unique_values_copy...]) <: Number
+	@bind binning_config MultiCheckBox(["Bin Data"])
+end
+
+# ╔═╡ cfab12c3-2376-4fb1-bd05-8d62f7f0ea81
+if !isempty(binning_config)
+	@bind bin_size combine() do Child
+		md""" Bin size: $(Child(TextField(default="", placeholder=nothing))) """
+	end
+end
+
+# ╔═╡ d040a79a-98d7-4126-87c8-d5b74fc65f8e
+md"""
+Mean Difference in unique values $(mean(diff(unique_values_copy)))
+"""
+
+# ╔═╡ a8186e3d-a948-4790-beda-51c1c1890018
+md""" X-axis Limits"""
+
+# ╔═╡ f99a719d-a1a2-4da8-9173-52fc2dfc8db4
+@bind hist_xlims multi_input("Min X", "Max X", range(extrema(unique_values_copy)...), extrema(unique_values_copy))
+
+# ╔═╡ 2496d549-9e39-45ac-98ab-4b1084ffcde6
+if !isempty(binning_config)
+	hist_plot = let (mn, mx) = extrema(unique_values_copy)
+		bins = isempty(bin_size[1]) ? nothing : mn:parse(Float64, bin_size[1]):mx
+		hist = isnothing(bins) ? 
+		histogram(unique_values_copy, title=col_name, xlabel="unique values",ylabel="counts"; xlims=Tuple(hist_xlims), weights=counts_copy) :
+		histogram(unique_values_copy, counts_copy, title=col_name, xlabel="unique values",ylabel="counts"; bins=bins, weights=counts_copy, xlims=Tuple(hist_xlims))
+	end
+	xlims!(hist_plot, (hist_xlims...))
+end
+
 # ╔═╡ 6d12c99e-3d12-4c39-be0b-0762f01bad14
 md"""
 # Reduced Data Set
 The data set is reduced to only contain rows with data for the given column: 
 #### $(col_name)
+Reducing the dataset can take some time.
 """
 
+# ╔═╡ e6e85da3-fbb0-4682-a4f8-4769d9edae92
+@bind reduce_dataset MultiCheckBox(["Reduce Dataset"])
+
 # ╔═╡ 8a6d2cdc-c582-4188-a317-49f28eeac3b9
-if length(unique_values_copy) < 5000
-	reduced_data = let
-		idxs = findall(x-> string(x) in string.(unique_values_copy), col_data)
-		col_data[idxs]
-		data[idxs, :]
+if !isempty(reduce_dataset)
+	if length(unique_values_copy) < 5000
+		reduced_data = let
+			idxs = findall(x-> string(x) in string.(unique_values_copy), col_data)
+			col_data[idxs]
+			data[idxs, :]
+		end
 	end
 end
 
@@ -220,7 +266,7 @@ Check to show Download
 @bind show_download CheckBox()
 
 # ╔═╡ 5b9afafb-a9b3-4197-928d-6a14c21896f1
-if length(unique_values_copy) < 5000 && show_download
+if length(unique_values_copy) < 5000 && show_download && !isempty(reduce_dataset)
 	DownloadButton(reduced_data, "$(col_name).csv")
 end
 
@@ -1455,7 +1501,15 @@ version = "1.4.1+1"
 # ╟─73eb0ed8-1413-4535-b28a-82b843afc567
 # ╟─78c63de2-ee4e-4c97-b613-f997811aa491
 # ╟─fc5b6da8-cad9-4e51-860e-f52acf6638df
+# ╟─14596c47-b5e9-4011-abfa-e6f5f85acc09
+# ╟─163ca386-68fe-4c81-ad36-0c3bf30583be
+# ╟─cfab12c3-2376-4fb1-bd05-8d62f7f0ea81
+# ╟─d040a79a-98d7-4126-87c8-d5b74fc65f8e
+# ╟─a8186e3d-a948-4790-beda-51c1c1890018
+# ╟─f99a719d-a1a2-4da8-9173-52fc2dfc8db4
+# ╟─2496d549-9e39-45ac-98ab-4b1084ffcde6
 # ╟─6d12c99e-3d12-4c39-be0b-0762f01bad14
+# ╟─e6e85da3-fbb0-4682-a4f8-4769d9edae92
 # ╟─8a6d2cdc-c582-4188-a317-49f28eeac3b9
 # ╟─23b93e1f-f2fe-483e-8ed9-eec24b6f5aa7
 # ╟─31af2a6c-247a-44ef-bf62-ad2737624cf8
