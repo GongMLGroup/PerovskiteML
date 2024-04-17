@@ -46,26 +46,30 @@ sorted_data = sort(data, col_sort_name)
 md"""
 ## Filter Missing Data
 There is more than just missing data to filter. Many columns have strings labeled `"Unknown"` which are also missing data points. Below we filter missing data points and these unknowns as a `1` in our data set.
+#### Filter
 """
 
 # ╔═╡ 922dc2e1-860e-493f-ad04-5b69e0c365d4
-@bind filter_config MultiCheckBox(["Filter 'Unknown'"]; default=["Filter 'Unknown'"])
+@bind filter_config MultiCheckBox(["Unknown", "nan; nan"]; default=["Unknown"])
 
-# ╔═╡ 6962d3e3-b971-4eba-8d06-99450044eef5
+# ╔═╡ 2fe48b16-255d-4444-969f-d4662a72b696
 begin
-	function filterData(data)
-		missing_data_key = "Filter 'Unknown'" in filter_config ? ["Unknown"] : []
-		data_matrix = [ismissing(el) ? 1 : el in missing_data_key ? 1 : 0 for el in Matrix(data)]
-		return data_matrix
+	function filterData(data, missing_keys)
+		@. ifelse(!ismissing(data) && in(data, (missing_keys,)), missing, data)
 	end
-	data_matrix = filterData(sorted_data)
+	filtered_data = filterData(sorted_data, filter_config)
+	data_matrix = Matrix(ismissing.(filtered_data))
 end;
 
 # ╔═╡ dcbea5ae-c02d-4511-851a-7ae458660da6
 begin
-	sparsity_plot = heatmap(data_matrix, color=:grays, colorbar=false, framestyle=:box, dpi=300, yflip=true)
-	yticks!(0:5000:40000, [string(i) for i in 0:5000:40000])
-	xticks!(0:50:400)
+	function generate_sparse_plot(data)
+		data_matrix = Matrix(ismissing.(data))
+		sparsity_plot = heatmap(data_matrix, color=:grays, colorbar=false, framestyle=:box, dpi=300, yflip=true)
+		yticks!(0:5000:40000, [string(i) for i in 0:5000:40000])
+		xticks!(0:50:400)
+	end
+	generate_sparse_plot(filtered_data)
 end
 
 # ╔═╡ 4489f9e3-02f0-4bcf-a9de-fd494b439692
@@ -88,12 +92,7 @@ begin
 end
 
 # ╔═╡ ae5f0ec5-0207-4da3-a01c-6fcc2c25a9fc
-begin
-	sparsity_sorted_matrix = filterData(sparsity_sorted_data)
-	sparsity_plot_2 = heatmap(sparsity_sorted_matrix, color=:grays, colorbar=false, framestyle=:box, dpi=300, yflip=true)
-	yticks!(0:5000:40000, [string(i) for i in 0:5000:40000])
-	xticks!(0:50:400)
-end
+generate_sparse_plot(filterData(sparsity_sorted_data, filter_config))
 
 # ╔═╡ 9654c0ac-37de-4f55-a111-2dd1bcc427c8
 plot(1:1:410, sorted_counts, xlabel="Column Index", ylabel="Number of Papers Reported", fillrange=0)
@@ -113,13 +112,13 @@ begin
 		end
 	end
 	md"""
-	# Filter # of Papers
+	# Filter # of Entries
 	Find the columns that fall between the lower and upper bounds for the number of papers with a given data type.
 	"""
 end
 
 # ╔═╡ a6ef6b1b-fefc-4854-8fdf-e6a6ca9c9c98
-@bind sparsity_range multi_input("Min Paper", "Max Papers", 0:43252, [1, 100])
+@bind sparsity_range multi_input("Min Entries", "Max Entries", 0:43252, [1, 100])
 
 # ╔═╡ 8eee05a3-5671-4f23-bd26-2b7112a879bb
 sparsity_range_indices = let
@@ -137,138 +136,132 @@ DataFrame(
 # ╔═╡ ef5b7782-ccf8-4fc1-ae31-0760bec6762a
 md"""
 ## Exploring Column Data
-The first plot shows the number of times a unique value occurs in a given column of data.
+Selecting 'Make First Column' swaps the selected column to be at the start of the data table for easier reading.
 """
+
+# ╔═╡ c7b7cd9d-f6a9-4435-830a-5e3969617127
+@bind col_config MultiCheckBox(["Make First Column"]; default=["Make First Column"])
+
+# ╔═╡ 72a9688f-10d3-44d9-b8b8-956c9bd313f3
+md""" ### Reduced Dataset """
 
 # ╔═╡ 860da093-8eb1-4f13-970c-4d70bb6c3230
 @bind col_name Select(names(data)[sparsity_idx][sparsity_range_indices])
 
+# ╔═╡ bc897fb9-e525-421b-baea-8c3b833163e7
+begin
+	save_path = abspath(joinpath(pwd(),"../data/$(col_name).csv"))
+	@bind go CounterButton("Save Reduced Dataset")
+end
+
+# ╔═╡ b0eba01b-385d-4179-aa4a-a05f6f45429f
+md""" ### Unique Values Bar Chart """
+
 # ╔═╡ 73eb0ed8-1413-4535-b28a-82b843afc567
 @bind bar_plot_config MultiCheckBox(
-	["Hide Largest", "Hide Missing", "Hide Unknown", "Sort by Counts"];
+	["Hide Largest", "Hide Missing", "Hide Unknown", "Sort by Counts", "Filter Duplicate Papers"];
 	default=["Hide Missing"]
 )
 
-# ╔═╡ 78c63de2-ee4e-4c97-b613-f997811aa491
+# ╔═╡ 64d75967-f82f-48b7-ad5d-6880f3281ef7
 begin
-	col_data = data[!, col_name]
-	value_counts = countmap(col_data)
-	counts = collect(values(value_counts))
-	unique_values = unique(keys(value_counts))
-	unique_values_copy = copy(unique_values)
-	counts_copy = copy(counts)
-	
-	if "Hide Missing" in bar_plot_config
-		let idx = findfirst(x -> string(x) == "missing", unique_values_copy)
-			if !isnothing(idx)
-				popat!(unique_values_copy, idx)
-				popat!(counts_copy, idx)
-			end
+	filtered_col_data = let
+		fdata = copy(data)
+		if "Hide Unknown" in bar_plot_config
+			fdata = filterData(fdata, ["Unknown"])
 		end
-	end
-	if "Hide Unknown" in bar_plot_config
-		let idx = findfirst(x -> x == "Unknown", unique_values_copy)
-			if !isnothing(idx)
-				popat!(unique_values_copy, idx)
-				popat!(counts_copy, idx)
-			end
+		if "Hide Missing" in bar_plot_config
+			fdata = dropmissing(fdata, col_name)
 		end
+		sort!(fdata, col_name)
+		# Place the selected column at the front
+		if "Make First Column" in col_config
+			col = fdata[:, col_name]
+			select!(fdata, Not(col_name))
+			insertcols!(fdata, 1, col_name => col)
+		end
+		fdata
 	end
-	sorted_indices = sortperm(counts_copy) |> reverse
+	col_group = groupby(filtered_col_data, col_name)
+	doi_group = [groupby(group, :Ref_DOI_number) for group in col_group]
+	unique_col_values = first.(values.(keys(col_group)))
+	if "Filter Duplicate Papers" in bar_plot_config
+		col_counts = length.(doi_group)
+	else
+		col_counts = [nrow(group) for group in col_group]
+	end
+
 	if "Hide Largest" in bar_plot_config
-		popfirst!(sorted_indices)
+		let (_,ind) = findmax(col_counts)
+			popat!(col_counts, ind)
+			popat!(unique_col_values, ind)
+		end
 	end
 	if "Sort by Counts" in bar_plot_config
-		unique_values_copy = unique_values_copy[sorted_indices]
-		counts_copy = counts_copy[sorted_indices]
-	else
-		unique_values_copy, counts_copy = let
-			idxs = sortperm(unique_values_copy)
-			(unique_values_copy[idxs], counts_copy[idxs])
+		let
+			inds = sortperm(col_counts)
+			col_counts = col_counts[inds]
+			unique_col_values = unique_col_values[inds]
 		end
 	end
-	bar_plot = bar(string.(unique_values_copy), counts_copy, title=col_name, xlabel="unique values",ylabel="counts")
+	bar(string.(unique_col_values), col_counts, title=col_name, xlabel="unique values",ylabel="counts")
+end
+
+# ╔═╡ 7a0eef05-3bb5-4ae6-a761-0a51fe414039
+filtered_col_data
+
+# ╔═╡ bf25c28b-d997-4704-8dc4-e60d2a64660f
+if go > 0
+	CSV.write(save_path, filtered_col_data)
 end
 
 # ╔═╡ fc5b6da8-cad9-4e51-860e-f52acf6638df
-DataFrame("Unique Values" => unique_values_copy, "Count" => counts_copy)
-
-# ╔═╡ 14596c47-b5e9-4011-abfa-e6f5f85acc09
-function order_of_magnitude(x::Real)
-	return floor(log10(abs(x)))
-end;
+DataFrame("Unique Values" => unique_col_values, "Count" => col_counts)
 
 # ╔═╡ 163ca386-68fe-4c81-ad36-0c3bf30583be
 # Check if the unique values are numbers
-if eltype([unique_values_copy...]) <: Number
-	@bind binning_config MultiCheckBox(["Bin Data"])
+if eltype(unique_col_values) <: Number
+	@bind binning_config MultiCheckBox(["Bin Data"], default=["Bin Data"])
+else
+	binning_config = []
 end
 
 # ╔═╡ cfab12c3-2376-4fb1-bd05-8d62f7f0ea81
 if !isempty(binning_config)
 	@bind bin_size combine() do Child
-		md""" Bin size: $(Child(TextField(default="", placeholder=nothing))) """
+		md""" Bin size: $(Child(TextField(default="", placeholder=nothing))) Leaving this empty gives an estimate for a good bin size."""
 	end
 end
 
 # ╔═╡ d040a79a-98d7-4126-87c8-d5b74fc65f8e
-md"""
-Mean Difference in unique values $(mean(diff(unique_values_copy)))
-"""
-
-# ╔═╡ a8186e3d-a948-4790-beda-51c1c1890018
-md""" X-axis Limits"""
+if !isempty(binning_config)
+	md"""
+	Mean Difference in unique values $(mean(diff(unique_col_values)))
+	#### X-axis Limits
+	"""
+end
 
 # ╔═╡ f99a719d-a1a2-4da8-9173-52fc2dfc8db4
-@bind hist_xlims multi_input("Min X", "Max X", range(extrema(unique_values_copy)...), extrema(unique_values_copy))
+if !isempty(binning_config)
+	@bind hist_xlims multi_input("Min X", "Max X", range(extrema(unique_col_values)...), extrema(unique_col_values))
+end
 
 # ╔═╡ 2496d549-9e39-45ac-98ab-4b1084ffcde6
 if !isempty(binning_config)
-	hist_plot = let (mn, mx) = extrema(unique_values_copy)
-		bins = isempty(bin_size[1]) ? nothing : mn:parse(Float64, bin_size[1]):mx
+	hist_plot = let (mn, mx) = extrema(unique_col_values)
+		bins = isempty(bin_size[1]) ? nothing : hist_xlims.lower:parse(Float64, bin_size[1]):mx
 		hist = isnothing(bins) ? 
-		histogram(unique_values_copy, title=col_name, xlabel="unique values",ylabel="counts"; xlims=Tuple(hist_xlims), weights=counts_copy) :
-		histogram(unique_values_copy, counts_copy, title=col_name, xlabel="unique values",ylabel="counts"; bins=bins, weights=counts_copy, xlims=Tuple(hist_xlims))
-	end
-	xlims!(hist_plot, (hist_xlims...))
-end
-
-# ╔═╡ 6d12c99e-3d12-4c39-be0b-0762f01bad14
-md"""
-# Reduced Data Set
-The data set is reduced to only contain rows with data for the given column: 
-#### $(col_name)
-Reducing the dataset can take some time.
-"""
-
-# ╔═╡ e6e85da3-fbb0-4682-a4f8-4769d9edae92
-@bind reduce_dataset MultiCheckBox(["Reduce Dataset"])
-
-# ╔═╡ 8a6d2cdc-c582-4188-a317-49f28eeac3b9
-if !isempty(reduce_dataset)
-	if length(unique_values_copy) < 5000
-		reduced_data = let
-			idxs = findall(x-> string(x) in string.(unique_values_copy), col_data)
-			col_data[idxs]
-			data[idxs, :]
-		end
+		histogram(unique_col_values; weights=col_counts,
+			title=col_name, xlabel="unique values", ylabel="counts", xlims=Tuple(hist_xlims)
+		) :
+		histogram(unique_col_values; weights=col_counts, bins=bins,
+			title=col_name, xlabel="value",ylabel="counts",   xlims=Tuple(hist_xlims)
+		)
 	end
 end
 
-# ╔═╡ 23b93e1f-f2fe-483e-8ed9-eec24b6f5aa7
-md"""
-*If the data set is too large the download link will cause the browser to crash.*
-
-Check to show Download
-"""
-
-# ╔═╡ 31af2a6c-247a-44ef-bf62-ad2737624cf8
-@bind show_download CheckBox()
-
-# ╔═╡ 5b9afafb-a9b3-4197-928d-6a14c21896f1
-if length(unique_values_copy) < 5000 && show_download && !isempty(reduce_dataset)
-	DownloadButton(reduced_data, "$(col_name).csv")
-end
+# ╔═╡ afdb14a8-b59e-47ef-b847-74972a289e68
+md""" ## TODO: Explore individual unique values and bins of unique values """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -1480,13 +1473,13 @@ version = "1.4.1+1"
 # ╠═43c9dec0-f694-11ee-1c00-770a699e853e
 # ╠═d65919a8-93d3-4a99-99ba-98a66eee9a0e
 # ╠═ebcf2d79-a86e-43e4-b7c8-69e22547704f
-# ╟─181a2b4a-5f25-486f-a21e-e62999dd9466
+# ╠═181a2b4a-5f25-486f-a21e-e62999dd9466
 # ╟─6c9291ba-e71a-4c05-a5eb-7b5dadd3cd51
 # ╟─0696a114-46a9-469d-a03d-9666661e4eed
 # ╟─b17c6528-ae17-4ffb-8390-45c996059f1e
 # ╟─ec8aed74-82db-4155-a2d6-93b089b61e89
 # ╟─922dc2e1-860e-493f-ad04-5b69e0c365d4
-# ╟─6962d3e3-b971-4eba-8d06-99450044eef5
+# ╟─2fe48b16-255d-4444-969f-d4662a72b696
 # ╟─dcbea5ae-c02d-4511-851a-7ae458660da6
 # ╟─4489f9e3-02f0-4bcf-a9de-fd494b439692
 # ╟─35f90a3a-b2b8-4c75-8a32-fe30d5fa418e
@@ -1497,22 +1490,21 @@ version = "1.4.1+1"
 # ╟─8eee05a3-5671-4f23-bd26-2b7112a879bb
 # ╟─37299187-0a36-4cef-a7e4-707aeb25d175
 # ╟─ef5b7782-ccf8-4fc1-ae31-0760bec6762a
+# ╟─c7b7cd9d-f6a9-4435-830a-5e3969617127
+# ╟─72a9688f-10d3-44d9-b8b8-956c9bd313f3
+# ╟─7a0eef05-3bb5-4ae6-a761-0a51fe414039
 # ╟─860da093-8eb1-4f13-970c-4d70bb6c3230
+# ╟─bc897fb9-e525-421b-baea-8c3b833163e7
+# ╟─bf25c28b-d997-4704-8dc4-e60d2a64660f
+# ╟─b0eba01b-385d-4179-aa4a-a05f6f45429f
 # ╟─73eb0ed8-1413-4535-b28a-82b843afc567
-# ╟─78c63de2-ee4e-4c97-b613-f997811aa491
+# ╟─64d75967-f82f-48b7-ad5d-6880f3281ef7
 # ╟─fc5b6da8-cad9-4e51-860e-f52acf6638df
-# ╟─14596c47-b5e9-4011-abfa-e6f5f85acc09
 # ╟─163ca386-68fe-4c81-ad36-0c3bf30583be
 # ╟─cfab12c3-2376-4fb1-bd05-8d62f7f0ea81
 # ╟─d040a79a-98d7-4126-87c8-d5b74fc65f8e
-# ╟─a8186e3d-a948-4790-beda-51c1c1890018
 # ╟─f99a719d-a1a2-4da8-9173-52fc2dfc8db4
 # ╟─2496d549-9e39-45ac-98ab-4b1084ffcde6
-# ╟─6d12c99e-3d12-4c39-be0b-0762f01bad14
-# ╟─e6e85da3-fbb0-4682-a4f8-4769d9edae92
-# ╟─8a6d2cdc-c582-4188-a317-49f28eeac3b9
-# ╟─23b93e1f-f2fe-483e-8ed9-eec24b6f5aa7
-# ╟─31af2a6c-247a-44ef-bf62-ad2737624cf8
-# ╟─5b9afafb-a9b3-4197-928d-6a14c21896f1
+# ╟─afdb14a8-b59e-47ef-b847-74972a289e68
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
