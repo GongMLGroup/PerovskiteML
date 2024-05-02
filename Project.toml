@@ -1,5 +1,9 @@
 [deps]
+AbstractTrees = "1520ce14-60c1-5f80-bbc7-55ef81b5835c"
+CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
+DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
-PlotlyJS = "f0f68f2c-4968-5e81-91da-67840de0976a"
+OrderedCollections = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
 Pluto = "c3e4b0f8-55cb-11ea-2926-15256bba5781"
-Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
+XLSX = "fdbf4ff8-1666-58a4-91e7-1b58723a45e0"
