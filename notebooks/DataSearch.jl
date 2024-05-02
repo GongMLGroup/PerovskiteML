@@ -15,21 +15,81 @@ macro bind(def, element)
 end
 
 # ╔═╡ 43c9dec0-f694-11ee-1c00-770a699e853e
-using CSV, DataFrames, StatsBase, Plots, PlutoUI
+using OrderedCollections, DataFrames, StatsBase, Dates, Plots, PlutoUI
 
-# ╔═╡ ea13b56c-0b3a-4fd0-ad46-74e9758280e9
-md"""
-# Exploring the Perovskite Database
-"""
+# ╔═╡ ad33d7c8-ac38-4d0f-8c60-143d827b61a7
+using CSV, JSON, XLSX, HTTP
 
 # ╔═╡ d65919a8-93d3-4a99-99ba-98a66eee9a0e
 import PlutoUI: combine
 
-# ╔═╡ ebcf2d79-a86e-43e4-b7c8-69e22547704f
-data_path = abspath(joinpath(pwd(),"../data/Perovskite_database_content_all_data_040524.csv"));
+# ╔═╡ 6441e29b-ea43-462f-82cb-fcbd95e2fa4a
+PlutoUI.TableOfContents()
 
-# ╔═╡ 181a2b4a-5f25-486f-a21e-e62999dd9466
-data = CSV.File(data_path) |> DataFrame;
+# ╔═╡ ea13b56c-0b3a-4fd0-ad46-74e9758280e9
+md"""
+# Exploring the Perovskite Database
+The necessary data files can be downloaded and put in the `../data` folder. If the data is not present it will be automatically be fetched from Google Drive links.
+"""
+
+# ╔═╡ d200d7cb-734b-432d-8597-75303929b7d3
+section_keys = let
+	path = abspath(joinpath(pwd(),"../data/section_keys.json"))
+	if isfile(path)
+		data = read(path, String)
+	else
+		# Downloads Keys if it is not present in the "../data" folder
+		response = HTTP.get("https://drive.google.com/uc?export=download&id=1Mv3d6KAqKE7Or36VE1ZpknncCISB9T7U")
+		data = String(response.body)
+	end
+	JSON.parse(data; dicttype=OrderedDict)
+end
+
+# ╔═╡ b74241fd-e528-4ae1-b210-cb0453c38438
+md"""
+### Data Reference Table
+"""
+
+# ╔═╡ 4d4248ed-d980-4900-9351-f9aad4cb4fe3
+begin
+	data_ref = let reference = OrderedDict()
+		path = abspath(joinpath(pwd(),"../data/pdp_units_data.xlsx"))
+		if isfile(path)
+			xlsx_file = XLSX.readxlsx(path)
+		else
+			response = HTTP.get("https://drive.google.com/uc?export=download&id=18fsmhGnlAOeJsPOPw4yG5W2qp14BWzGC")
+			data = IOBuffer(response.body)
+			xlsx_file = XLSX.readxlsx(data)
+		end
+		for title in XLSX.sheetnames(xlsx_file)
+			reference[title] = DataFrame(XLSX.gettable(xlsx_file[title]))
+		end
+		reference
+	end
+	data_ref["Full Table"]
+end
+
+# ╔═╡ 27f3cf23-1f1f-4bd4-b1e3-a77be1f3f7c5
+md"""
+### PDP Data Table
+"""
+
+# ╔═╡ ebcf2d79-a86e-43e4-b7c8-69e22547704f
+data = let 
+	path = abspath(joinpath(pwd(),"../data/Perovskite_database_content_all_data_040524.csv"))
+	if !isfile(path)
+		# Downloads Data if it is not present in the "../data" folder
+		response = HTTP.get("https://drive.google.com/uc?export=download&id=1RHpO2DBxCIY0s1xISjWgBHdH3sD5QEjE")
+		path = String(response.body) |> IOBuffer
+	end
+	DataFrame(CSV.File(path))
+end
+
+# ╔═╡ 9ba597ed-2226-4eef-95f0-53b924279503
+md"""
+### Sorted Data
+Rows are sorted by the values in a given column
+"""
 
 # ╔═╡ 0696a114-46a9-469d-a03d-9666661e4eed
 md"""
@@ -112,7 +172,7 @@ begin
 		end
 	end
 	md"""
-	# Filter # of Entries
+	## Filter # of Entries
 	Find the columns that fall between the lower and upper bounds for the number of papers with a given data type.
 	"""
 end
@@ -136,17 +196,21 @@ DataFrame(
 # ╔═╡ ef5b7782-ccf8-4fc1-ae31-0760bec6762a
 md"""
 ## Exploring Column Data
+"""
+
+# ╔═╡ 5acb87b6-7836-4c02-9028-43cc0fd8197c
+md""" Sorted from greatest to least # of entries """
+
+# ╔═╡ 860da093-8eb1-4f13-970c-4d70bb6c3230
+@bind col_name Select(names(data)[sparsity_idx][sparsity_range_indices])
+
+# ╔═╡ 72a9688f-10d3-44d9-b8b8-956c9bd313f3
+md""" ### Reduced Dataset
 Selecting 'Make First Column' swaps the selected column to be at the start of the data table for easier reading.
 """
 
 # ╔═╡ c7b7cd9d-f6a9-4435-830a-5e3969617127
 @bind col_config MultiCheckBox(["Make First Column"]; default=["Make First Column"])
-
-# ╔═╡ 72a9688f-10d3-44d9-b8b8-956c9bd313f3
-md""" ### Reduced Dataset """
-
-# ╔═╡ 860da093-8eb1-4f13-970c-4d70bb6c3230
-@bind col_name Select(names(data)[sparsity_idx][sparsity_range_indices])
 
 # ╔═╡ bc897fb9-e525-421b-baea-8c3b833163e7
 begin
@@ -162,6 +226,56 @@ md""" ### Unique Values Bar Chart """
 	["Hide Largest", "Hide Missing", "Hide Unknown", "Sort by Counts", "Filter Duplicate Papers"];
 	default=["Hide Missing"]
 )
+
+# ╔═╡ 1ebc9e8e-b809-4bc9-8af3-b40df432a9d8
+begin
+	function getcolref(name)
+		first(filter(row -> first(row) == name, eachrow(data_ref["Full Table"])))
+	end
+	function getunit(name)
+		row = getcolref(name)
+		unit = row[:Unit]
+		if ismissing(unit)
+			unit = row[:Pattern]
+		end
+		if ismissing(unit)
+			unit = "Unique Values"
+		end
+		return unit
+	end
+	
+	getcountsname = () -> "Filter Duplicate Papers" in bar_plot_config ? "# of Papers" : "# of Devices"
+
+	function parsevalue(val)
+		if ismissing(val)
+			return val
+		end
+		if ismissing(val) || typeof(val) <: Number || typeof(val) <: Date
+			return val
+		end
+		tmp = tryparse(Int, val)
+		if isnothing(tmp)
+			tmp = tryparse(Float64, val)
+		end
+		if isnothing(tmp)
+			return val
+		end
+		return tmp
+	end
+end;
+
+# ╔═╡ 405dd062-4435-4b8d-a94f-1da1e18020eb
+let
+	col_ref = getcolref(col_name)
+	col_text = "<h4>$(col_name)</h4>"
+	for key in ["Unit", "Pattern", "Description", "Concerns"]
+		val = col_ref[key]
+		if !ismissing(val)
+			col_text = col_text * "<h5>$(key)</h5> $(val)"
+		end
+	end
+	HTML(col_text)
+end
 
 # ╔═╡ 64d75967-f82f-48b7-ad5d-6880f3281ef7
 begin
@@ -180,7 +294,7 @@ begin
 			select!(fdata, Not(col_name))
 			insertcols!(fdata, 1, col_name => col)
 		end
-		fdata
+		parsevalue.(fdata)
 	end
 	col_group = groupby(filtered_col_data, col_name)
 	doi_group = [groupby(group, :Ref_DOI_number) for group in col_group]
@@ -204,7 +318,7 @@ begin
 			unique_col_values = unique_col_values[inds]
 		end
 	end
-	bar(string.(unique_col_values), col_counts, title=col_name, xlabel="unique values",ylabel="counts")
+	bar(string.(unique_col_values), col_counts, title=col_name, xlabel=getunit(col_name),ylabel=getcountsname())
 end
 
 # ╔═╡ 7a0eef05-3bb5-4ae6-a761-0a51fe414039
@@ -252,10 +366,10 @@ if !isempty(binning_config)
 		bins = isempty(bin_size[1]) ? nothing : hist_xlims.lower:parse(Float64, bin_size[1]):mx
 		hist = isnothing(bins) ? 
 		histogram(unique_col_values; weights=col_counts,
-			title=col_name, xlabel="unique values", ylabel="counts", xlims=Tuple(hist_xlims)
+			title=col_name, xlabel=getunit(col_name), ylabel=getcountsname(), xlims=Tuple(hist_xlims)
 		) :
 		histogram(unique_col_values; weights=col_counts, bins=bins,
-			title=col_name, xlabel="value",ylabel="counts",   xlims=Tuple(hist_xlims)
+			title=col_name, xlabel=getunit(col_name),ylabel=getcountsname(),   xlims=Tuple(hist_xlims)
 		)
 	end
 end
@@ -268,16 +382,25 @@ PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
+HTTP = "cd3eb016-35fb-5094-929b-558a96fad6f3"
+JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
+OrderedCollections = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
+XLSX = "fdbf4ff8-1666-58a4-91e7-1b58723a45e0"
 
 [compat]
 CSV = "~0.10.13"
 DataFrames = "~1.6.1"
+HTTP = "~1.10.6"
+JSON = "~0.21.4"
+OrderedCollections = "~1.6.3"
 Plots = "~1.40.3"
 PlutoUI = "~0.7.58"
 StatsBase = "~0.34.3"
+XLSX = "~0.10.1"
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000002
@@ -286,7 +409,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.10.2"
 manifest_format = "2.0"
-project_hash = "c89c8fc097dc37f05af276c19b617c677b85ffbc"
+project_hash = "f957eac3aa526838ac7cc739346dd95bbc5ded6a"
 
 [[deps.AbstractPlutoDingetjes]]
 deps = ["Pkg"]
@@ -455,6 +578,12 @@ git-tree-sha1 = "4558ab818dcceaab612d1bb8c19cee87eda2b83c"
 uuid = "2e619515-83b5-522b-bb60-26c02a35a201"
 version = "2.5.0+0"
 
+[[deps.EzXML]]
+deps = ["Printf", "XML2_jll"]
+git-tree-sha1 = "380053d61bb9064d6aa4a9777413b40429c79901"
+uuid = "8f5d6c58-4d21-5cfd-889c-e3ad7ee6a615"
+version = "1.2.0"
+
 [[deps.FFMPEG]]
 deps = ["FFMPEG_jll"]
 git-tree-sha1 = "b57e3acbe22f8484b4b5ff66a7499717fe1a9cc8"
@@ -552,9 +681,9 @@ version = "1.0.2"
 
 [[deps.HTTP]]
 deps = ["Base64", "CodecZlib", "ConcurrentUtilities", "Dates", "ExceptionUnwrapping", "Logging", "LoggingExtras", "MbedTLS", "NetworkOptions", "OpenSSL", "Random", "SimpleBufferStream", "Sockets", "URIs", "UUIDs"]
-git-tree-sha1 = "8e59b47b9dc525b70550ca082ce85bcd7f5477cd"
+git-tree-sha1 = "2c3ec1f90bb4a8f7beafb0cffea8a4c3f4e636ab"
 uuid = "cd3eb016-35fb-5094-929b-558a96fad6f3"
-version = "1.10.5"
+version = "1.10.6"
 
 [[deps.HarfBuzz_jll]]
 deps = ["Artifacts", "Cairo_jll", "Fontconfig_jll", "FreeType2_jll", "Glib_jll", "Graphite2_jll", "JLLWrappers", "Libdl", "Libffi_jll", "Pkg"]
@@ -1195,6 +1324,12 @@ git-tree-sha1 = "cd1659ba0d57b71a464a29e64dbc67cfe83d54e7"
 uuid = "76eceee3-57b5-4d4a-8e66-0e911cebbf60"
 version = "1.6.1"
 
+[[deps.XLSX]]
+deps = ["Artifacts", "Dates", "EzXML", "Printf", "Tables", "ZipFile"]
+git-tree-sha1 = "319b05e790046f18f12b8eae542546518ef1a88f"
+uuid = "fdbf4ff8-1666-58a4-91e7-1b58723a45e0"
+version = "0.10.1"
+
 [[deps.XML2_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Libiconv_jll", "Zlib_jll"]
 git-tree-sha1 = "532e22cf7be8462035d092ff21fada7527e2c488"
@@ -1357,6 +1492,12 @@ git-tree-sha1 = "e92a1a012a10506618f10b7047e478403a046c77"
 uuid = "c5fb5394-a638-5e4d-96e5-b29de1b5cf10"
 version = "1.5.0+0"
 
+[[deps.ZipFile]]
+deps = ["Libdl", "Printf", "Zlib_jll"]
+git-tree-sha1 = "f492b7fe1698e623024e873244f10d89c95c340a"
+uuid = "a5390f91-8eb1-5f08-bee0-b1d1ffed6cea"
+version = "0.10.1"
+
 [[deps.Zlib_jll]]
 deps = ["Libdl"]
 uuid = "83775a58-1f1d-513f-b197-d71354ab007a"
@@ -1469,11 +1610,17 @@ version = "1.4.1+1"
 """
 
 # ╔═╡ Cell order:
-# ╟─ea13b56c-0b3a-4fd0-ad46-74e9758280e9
 # ╠═43c9dec0-f694-11ee-1c00-770a699e853e
+# ╠═ad33d7c8-ac38-4d0f-8c60-143d827b61a7
 # ╠═d65919a8-93d3-4a99-99ba-98a66eee9a0e
-# ╠═ebcf2d79-a86e-43e4-b7c8-69e22547704f
-# ╠═181a2b4a-5f25-486f-a21e-e62999dd9466
+# ╠═6441e29b-ea43-462f-82cb-fcbd95e2fa4a
+# ╟─ea13b56c-0b3a-4fd0-ad46-74e9758280e9
+# ╟─d200d7cb-734b-432d-8597-75303929b7d3
+# ╟─b74241fd-e528-4ae1-b210-cb0453c38438
+# ╟─4d4248ed-d980-4900-9351-f9aad4cb4fe3
+# ╟─27f3cf23-1f1f-4bd4-b1e3-a77be1f3f7c5
+# ╟─ebcf2d79-a86e-43e4-b7c8-69e22547704f
+# ╟─9ba597ed-2226-4eef-95f0-53b924279503
 # ╟─6c9291ba-e71a-4c05-a5eb-7b5dadd3cd51
 # ╟─0696a114-46a9-469d-a03d-9666661e4eed
 # ╟─b17c6528-ae17-4ffb-8390-45c996059f1e
@@ -1490,14 +1637,17 @@ version = "1.4.1+1"
 # ╟─8eee05a3-5671-4f23-bd26-2b7112a879bb
 # ╟─37299187-0a36-4cef-a7e4-707aeb25d175
 # ╟─ef5b7782-ccf8-4fc1-ae31-0760bec6762a
-# ╟─c7b7cd9d-f6a9-4435-830a-5e3969617127
-# ╟─72a9688f-10d3-44d9-b8b8-956c9bd313f3
-# ╟─7a0eef05-3bb5-4ae6-a761-0a51fe414039
+# ╟─5acb87b6-7836-4c02-9028-43cc0fd8197c
 # ╟─860da093-8eb1-4f13-970c-4d70bb6c3230
+# ╟─405dd062-4435-4b8d-a94f-1da1e18020eb
+# ╟─72a9688f-10d3-44d9-b8b8-956c9bd313f3
+# ╟─c7b7cd9d-f6a9-4435-830a-5e3969617127
+# ╟─7a0eef05-3bb5-4ae6-a761-0a51fe414039
 # ╟─bc897fb9-e525-421b-baea-8c3b833163e7
 # ╟─bf25c28b-d997-4704-8dc4-e60d2a64660f
 # ╟─b0eba01b-385d-4179-aa4a-a05f6f45429f
 # ╟─73eb0ed8-1413-4535-b28a-82b843afc567
+# ╟─1ebc9e8e-b809-4bc9-8af3-b40df432a9d8
 # ╟─64d75967-f82f-48b7-ad5d-6880f3281ef7
 # ╟─fc5b6da8-cad9-4e51-860e-f52acf6638df
 # ╟─163ca386-68fe-4c81-ad36-0c3bf30583be
