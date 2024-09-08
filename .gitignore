@@ -1,3 +1,6 @@
+# Local Julia Environment files
 Manifest.toml
+
+# Images
 *.png
 !test.png
