@@ -1,6 +1,11 @@
 # Local Julia Environment files
 Manifest.toml
 
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
 # Images
 *.png
 !test.png
