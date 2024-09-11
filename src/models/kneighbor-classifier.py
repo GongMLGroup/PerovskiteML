@@ -1,9 +1,7 @@
 # --- How to run ---
 # cd src
-# python -m models.xgboost_09-08-24
+# python -m models.kneighbor-classifier
 # ------------------
-import pandas as pd
-
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import OrdinalEncoder
@@ -14,6 +12,7 @@ from sklearn.compose import ColumnTransformer
 from sklearn.model_selection import cross_validate
 
 import scipy.stats as stats
+
 # import custom scripts
 from data_utils import *
 
