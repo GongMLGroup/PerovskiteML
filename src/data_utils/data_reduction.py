@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 import re
 
 def passes_sparsity(column, percent=0.95):
@@ -38,8 +39,9 @@ def partition_by_pattern(refs, keys):
   for key in keys:
     ref = refs[key]
     pat, nonpat = get_valid_patterns(ref)
+    # print(pat, nonpat)
     patterned.append(pat)
     nonpatterned.append(nonpat)
-    patterned = pd.concat(patterned)
-    nonpatterned = pd.concat(nonpatterned)
+  patterned = pd.concat(patterned)
+  nonpatterned = pd.concat(nonpatterned)
   return patterned, nonpatterned
