@@ -39,7 +39,6 @@ def partition_by_pattern(refs, keys):
   for key in keys:
     ref = refs[key]
     pat, nonpat = get_valid_patterns(ref)
-    # print(pat, nonpat)
     patterned.append(pat)
     nonpatterned.append(nonpat)
   patterned = pd.concat(patterned)

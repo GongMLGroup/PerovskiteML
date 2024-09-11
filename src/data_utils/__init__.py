@@ -1,4 +1,6 @@
 import pandas as pd
+import numpy as np
+import copy
 
 ## This File acts a pseudo package, allowing useful scripts to be easily imported
 from .data_expansion import *
@@ -57,13 +59,45 @@ class PerovskiteData():
       print("Data Initialized.")
 DATASET = PerovskiteData()
 
-def preprocess_data(threshold, depth, exclude = [], verbose: bool = True):
+def _column_selector(pat, nonpat):
+   patterned = [col for col in pat]
+   categorical = []
+   numerical = []
+   for col in nonpat:
+      col_types = nonpat[col].apply(type)
+      if np.any((col_types == bool) | (col_types == object) | (col_types == str)):
+         categorical.append(col)
+      else:
+         numerical.append(col)
+   return {
+      'patterned': patterned,
+      'categorical': categorical,
+      'numerical': numerical
+   }
+
+def preprocess_data(threshold, depth, exclude_sections = [], exclude_cols = [], verbose: bool = True):
     global SECTION_KEYS
     global DATASET
+
+    DATASET.load_data()
+    print("Preprocessing Data...")
+    print(f"Threshold: {threshold}, Depth: {depth}")
     data = DATASET.data
     ref = DATASET.ref
-    keys = SECTION_KEYS
-    for key in exclude:
-       print(key)
+
+    keys = copy.copy(SECTION_KEYS)
+    for key in exclude_sections:
        del keys[key]
-    return partition_by_pattern(ref, keys)
+
+    patterned, nonpatterned = partition_by_pattern(ref, keys)
+
+    patterned_data = reduce_data(data[patterned], percent=threshold)
+    patterned_data.drop(columns=exclude_cols, inplace=True, errors='ignore')
+
+    nonpatterned_data = reduce_data(data[nonpatterned], percent=threshold)
+    nonpatterned_data.drop(columns=exclude_cols, inplace=True, errors='ignore')
+
+    expanded_data = expand_dataset(patterned_data, percent=depth, verbose=verbose)
+    print("Data Preprocessed.")
+    return pd.concat([expanded_data, nonpatterned_data], axis=1), _column_selector(expanded_data, nonpatterned_data)
+
