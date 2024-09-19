@@ -1,6 +1,6 @@
 # --- How to run ---
-# cd src
-# python -m models.xgboost-reg
+# cd .\src\models\
+# python .\xgboost-reg.py
 # ------------------
 import numpy as np
 import xgboost as xgb
@@ -16,7 +16,7 @@ from sklearn.model_selection import cross_val_score
 import matplotlib.pyplot as plt
 
 # import custom scripts
-from data_utils import *
+from scripts import *
 
 # Threshold (%) of data for a feature to be included
 THRESHOLD = 0.75
@@ -47,6 +47,10 @@ data, selector = preprocess_data(
 mask = DATASET.data[TARGET_COL].notna()
 X = data[mask]
 y = DATASET.data[mask][TARGET_COL]
+
+print("{X.shape[1]} features")
+print(X.shape)
+print(y.shape)
 
 categorical_encoder = OrdinalEncoder(handle_unknown='use_encoded_value', unknown_value=-1)
 
@@ -84,5 +88,9 @@ X_transformed.columns = X.columns
 
 explainer = shap.TreeExplainer(model.named_steps['xgbregressor'])
 shap_values = explainer.shap_values(X_transformed)
+shap.summary_plot(shap_values[:1000, :], X_transformed.iloc[:1000, :])
 shap.summary_plot(shap_values, X_transformed, plot_type="bar")
+shap.force_plot(
+    explainer.expected_value, shap_values[:1000, :], X.iloc[:1000, :]
+)
 plt.show()
