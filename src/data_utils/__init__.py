@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 import numpy as np
 import copy
@@ -44,17 +45,31 @@ NAN_EQUIVALENTS = {
   }
 
 class PerovskiteData():
-    ref = None
-    data = None
-    def load_data(self):
+   ref = None
+   data = None
+   ref_file = 'pdp_units_data.xlsx'
+   database_file = 'Perovskite_database.csv'
+   def load_data(self):
       if self.data is None:
-        print("Loading Perovskite Data...")
-        self.data = pd.read_csv('../data/Perovskite_database_content_all_data_040524.csv', low_memory=False)
-        self.data.replace(NAN_EQUIVALENTS, inplace=True)
+         print("Loading Perovskite Data...")
+         database_path = os.path.join('data/', self.database_file)
+         if not os.path.exists(database_path):
+            database_path = os.path.join('../', database_path)
+         if not os.path.exists(database_path):
+            database_path = os.path.join('../', database_path)
+         print(database_path)
+         self.data = pd.read_csv(database_path, low_memory=False)
+         self.data.replace(NAN_EQUIVALENTS, inplace=True)
       
       if self.ref is None:
-        print("Loading Reference Data...")
-        self.ref = pd.read_excel('../data/pdp_units_data.xlsx', sheet_name=None)
+         print("Loading Reference Data...")
+         ref_path = os.path.join('data/', self.ref_file)
+         if not os.path.exists(ref_path):
+            ref_path = os.path.join('../', ref_path)
+         if not os.path.exists(ref_path):
+            ref_path = os.path.join('../', ref_path)
+         print(ref_path)
+         self.ref = pd.read_excel(ref_path, sheet_name=None)
          
       print("Data Initialized.")
 DATASET = PerovskiteData()
@@ -76,28 +91,33 @@ def _column_selector(pat, nonpat):
    }
 
 def preprocess_data(threshold, depth, exclude_sections = [], exclude_cols = [], verbose: bool = True):
-    global SECTION_KEYS
-    global DATASET
+   global SECTION_KEYS
+   global DATASET
 
-    DATASET.load_data()
-    print("Preprocessing Data...")
-    print(f"Threshold: {threshold}, Depth: {depth}")
-    data = DATASET.data
-    ref = DATASET.ref
+   print(os.getcwd())
+   DATASET.load_data()
+   print("Preprocessing Data...")
+   print(f"Threshold: {threshold}, Depth: {depth}")
+   data = DATASET.data
+   ref = DATASET.ref
 
-    keys = copy.copy(SECTION_KEYS)
-    for key in exclude_sections:
-       del keys[key]
+   keys = copy.copy(SECTION_KEYS)
+   for key in exclude_sections:
+      del keys[key]
 
-    patterned, nonpatterned = partition_by_pattern(ref, keys)
+   patterned, nonpatterned = partition_by_pattern(ref, keys)
 
-    patterned_data = reduce_data(data[patterned], percent=threshold)
-    patterned_data.drop(columns=exclude_cols, inplace=True, errors='ignore')
+   patterned_data = reduce_data(data[patterned], percent=threshold)
+   patterned_data.drop(columns=exclude_cols, inplace=True, errors='ignore')
 
-    nonpatterned_data = reduce_data(data[nonpatterned], percent=threshold)
-    nonpatterned_data.drop(columns=exclude_cols, inplace=True, errors='ignore')
+   nonpatterned_data = reduce_data(data[nonpatterned], percent=threshold)
+   nonpatterned_data.drop(columns=exclude_cols, inplace=True, errors='ignore')
 
-    expanded_data = expand_dataset(patterned_data, percent=depth, verbose=verbose)
-    print("Data Preprocessed.")
-    return pd.concat([expanded_data, nonpatterned_data], axis=1), _column_selector(expanded_data, nonpatterned_data)
+   expanded_data = expand_dataset(patterned_data, percent=depth, verbose=verbose)
+   print("Data Preprocessed.")
+   data = pd.concat([expanded_data, nonpatterned_data], axis=1)
+   data.replace(NAN_EQUIVALENTS, inplace=True)
+   return data, _column_selector(expanded_data, nonpatterned_data)
 
+def display_scores(scores):
+   print("Scores: {0}\nMean: {1:.3f}\nStd: {2:.3f}".format(scores, np.mean(scores), np.std(scores)))
