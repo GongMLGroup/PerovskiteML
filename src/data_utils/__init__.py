@@ -90,6 +90,12 @@ def _column_selector(pat, nonpat):
       'numerical': numerical
    }
 
+def _to_numeric(col):
+    col_types = col.apply(type)
+    if not np.any((col_types == bool)):
+        return pd.to_numeric(col, errors='ignore')
+    return col
+
 def preprocess_data(threshold, depth, exclude_sections = [], exclude_cols = [], verbose: bool = True):
    global SECTION_KEYS
    global DATASET
@@ -117,6 +123,7 @@ def preprocess_data(threshold, depth, exclude_sections = [], exclude_cols = [], 
    print("Data Preprocessed.")
    data = pd.concat([expanded_data, nonpatterned_data], axis=1)
    data.replace(NAN_EQUIVALENTS, inplace=True)
+   data = data.apply(_to_numeric)
    return data, _column_selector(expanded_data, nonpatterned_data)
 
 def display_scores(scores):
