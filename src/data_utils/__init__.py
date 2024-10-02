@@ -1,7 +1,10 @@
 import os
-import pandas as pd
-import numpy as np
 import copy
+import hashlib
+import pandas as pd
+import pyarrow as pa
+import pyarrow.parquet as pq
+import numpy as np
 
 ## This File acts a pseudo package, allowing useful scripts to be easily imported
 from .data_expansion import *
@@ -44,6 +47,13 @@ NAN_EQUIVALENTS = {
     'nan; nan': None
   }
 
+def _search_parents(path, depth=2):
+   for x in range(depth):
+      if os.path.exists(path):
+         return path
+      path = os.path.join('../', path)
+   return path
+
 class PerovskiteData():
    ref = None
    data = None
@@ -53,22 +63,14 @@ class PerovskiteData():
       if self.data is None:
          print("Loading Perovskite Data...")
          database_path = os.path.join('data/', self.database_file)
-         if not os.path.exists(database_path):
-            database_path = os.path.join('../', database_path)
-         if not os.path.exists(database_path):
-            database_path = os.path.join('../', database_path)
-         print(database_path)
+         database_path = _search_parents(database_path)
          self.data = pd.read_csv(database_path, low_memory=False)
          self.data.replace(NAN_EQUIVALENTS, inplace=True)
       
       if self.ref is None:
          print("Loading Reference Data...")
          ref_path = os.path.join('data/', self.ref_file)
-         if not os.path.exists(ref_path):
-            ref_path = os.path.join('../', ref_path)
-         if not os.path.exists(ref_path):
-            ref_path = os.path.join('../', ref_path)
-         print(ref_path)
+         ref_path = _search_parents(ref_path)
          self.ref = pd.read_excel(ref_path, sheet_name=None)
          
       print("Data Initialized.")
@@ -96,17 +98,42 @@ def _to_numeric(col):
         return pd.to_numeric(col, errors='ignore')
     return col
 
+def hash_params(params: dict):
+   param_str = '_'.join(f'{key}={value}' for key, value in sorted(params.items()))
+   return hashlib.md5(param_str.encode()).hexdigest()
+
 def preprocess_data(threshold, depth, exclude_sections = [], exclude_cols = [], verbose: bool = True):
    global SECTION_KEYS
    global DATASET
 
-   print(os.getcwd())
+   params = {
+      'threshold': threshold,
+      'depth': depth,
+      'xsections': exclude_sections,
+      'xcols': exclude_cols,
+   }
+
+   # Generate file name from parameters
+   file_hash = hash_params(params)
+   file_name = f'expanded_data_d{depth}_t{threshold}_{file_hash}.parquet'
+   file_path = _search_parents('data/preprocessed')
+   file_path = os.path.join(file_path, file_name)
+
+   # Check if file exists
+   if os.path.exists(file_path):
+      print(f'File already exists: {file_path}')
+      print('Loading Data...')
+      table = pq.read_table(file_path)
+      return table.to_pandas(), None
+
+   print(f"File does not exist, preprocessing and saving to {file_path}")
    DATASET.load_data()
    print("Preprocessing Data...")
    print(f"Threshold: {threshold}, Depth: {depth}")
    data = DATASET.data
    ref = DATASET.ref
 
+   # Remove excluded keys
    keys = copy.copy(SECTION_KEYS)
    for key in exclude_sections:
       del keys[key]
@@ -124,6 +151,15 @@ def preprocess_data(threshold, depth, exclude_sections = [], exclude_cols = [], 
    data = pd.concat([expanded_data, nonpatterned_data], axis=1)
    data.replace(NAN_EQUIVALENTS, inplace=True)
    data = data.apply(_to_numeric)
+
+   # Save Data
+   print(f"Saving Data to {file_path}...")
+   table = pa.Table.from_pandas(data)
+   metadata = table.schema.metadata or {}
+   metadata.update({key.encode(): str(value).encode() for key, value in params.items()})
+   pq.write_table(table.replace_schema_metadata(metadata), file_path)
+   print("Data Saved.")
+
    return data, _column_selector(expanded_data, nonpatterned_data)
 
 def display_scores(scores):
