@@ -6,10 +6,10 @@ import numpy as np
 import pandas as pd
 import xgboost as xgb
 import shap
-from sklearn.preprocessing import StandardScaler, OrdinalEncoder
+from sklearn.preprocessing import OrdinalEncoder
 
 from sklearn.metrics import mean_squared_error
-from sklearn.compose import ColumnTransformer
+from sklearn.compose import ColumnTransformer, make_column_selector
 from sklearn.pipeline import Pipeline, make_pipeline
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import cross_val_score
@@ -45,6 +45,7 @@ data, selector = preprocess_data(
 )
 
 # Process target data
+DATASET.load_data()
 mask = DATASET.data[TARGET_COL].notna()
 X = data[mask]
 y = DATASET.data[mask][TARGET_COL]
@@ -53,16 +54,15 @@ print("{X.shape[1]} features")
 print(X.shape)
 print(y.shape)
 
-categorical_encoder = OrdinalEncoder(handle_unknown='use_encoded_value', unknown_value=-1)
+encoder = OrdinalEncoder(handle_unknown='use_encoded_value', unknown_value=-1)
 
-column_preprocessor = ColumnTransformer([
-    ('numerical', 'passthrough', selector['numerical']),
-    ('categorical', categorical_encoder, selector['categorical']),
-    ('patterned', categorical_encoder, selector['patterned'])
+numerical_selector = make_column_selector(dtype_include=np.number)
+categorical_selector = make_column_selector(dtype_include=[bool, object])
+
+preprocessor = ColumnTransformer([
+    ('numerical', 'passthrough', numerical_selector),
+    ('categorical', encoder, categorical_selector),
 ])
-
-scaler = StandardScaler().set_output(transform="pandas")
-preprocessor = make_pipeline(column_preprocessor, scaler)
 
 xgb_model = xgb.XGBRegressor(objective="reg:squarederror", random_state=42)
 model = Pipeline([
