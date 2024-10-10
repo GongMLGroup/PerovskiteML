@@ -1,8 +1,9 @@
 # --- How to run ---
-# cd .\src\models\
-# python .\xgboost-reg.py
+# cd src\models\
+# python xgboost-reg.py
 # ------------------
 import numpy as np
+import pandas as pd
 import xgboost as xgb
 import shap
 from sklearn.preprocessing import StandardScaler, OrdinalEncoder
@@ -83,8 +84,9 @@ def display_scores(scores):
 scores = cross_val_score(model, X, y, scoring='neg_root_mean_squared_error', cv=5, n_jobs=-1)
 display_scores(-scores)
 
-X_transformed = model.named_steps['preprocessor'].transform(X)
-X_transformed.columns = X.columns
+all_columns = list(X.select_dtypes(np.number).columns) + list(X.select_dtypes([bool, object]).columns)
+X_transformed = pd.DataFrame(model.named_steps['preprocessor'].transform(X))
+X_transformed.columns = all_columns
 
 explainer = shap.TreeExplainer(model.named_steps['xgbregressor'])
 shap_values = explainer.shap_values(X_transformed)
