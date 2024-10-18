@@ -22,8 +22,8 @@ import matplotlib.pyplot as plt
 from scripts import *
 
 run = neptune.init_run(
-    project="PerovskiteML/test-project",
-    api_token="eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vYXBwLm5lcHR1bmUuYWkiLCJhcGlfdXJsIjoiaHR0cHM6Ly9hcHAubmVwdHVuZS5haSIsImFwaV9rZXkiOiI3ZWVhOTdlNy1iOTE0LTQxYWEtOTUzNC1lZTA5NTJhMzk3NDgifQ==" 
+    project=NEPTUNE_PROJECT,
+    api_token=NEPTUNE_API_TOKEN 
 )
 neptune_callback = NeptuneCallback(
     run=run,
@@ -35,7 +35,7 @@ seed = 42
 parameters = {
     'preprocessor': {
         'target': "JV_default_PCE",
-        'threshold': 0.95,
+        'threshold': 0.75,
         'depth': 0.75,
         'exclude_sections': [
             "Reference information",
