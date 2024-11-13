@@ -19,6 +19,9 @@ venv.bak/
 *.png
 !test.png
 
+# Neptune
+*.neptune
+
 # Preprocessed Data
 *.parquet
 
