@@ -23,7 +23,7 @@ from scripts import *
 
 run = neptune.init_run(
     project=NEPTUNE_PROJECT,
-    api_token=NEPTUNE_API_TOKEN 
+    api_token=NEPTUNE_API_TOKEN
 )
 neptune_callback = NeptuneCallback(
     run=run,
