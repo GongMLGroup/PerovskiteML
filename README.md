@@ -25,5 +25,5 @@ NEPTUNE_API_TOKEN = "YOUR_API_TOKEN"
 To make sure your packages are up to date make sure to update your virtual environment when syncing with new changes.
 ```bash
 ./.venv/Scripts/activate
-pip install -r requirements.txt
+pip install -r pyrequirements.txt
 ```
