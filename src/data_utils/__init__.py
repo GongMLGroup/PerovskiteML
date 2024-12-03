@@ -8,8 +8,8 @@ import pyarrow.parquet as pq
 import numpy as np
 
 # This File acts a pseudo package, allowing useful scripts to be easily imported
-from .data_expansion import *
-from .data_reduction import *
+from .expansion import *
+from .reduction import *
 
 dotenv.load_dotenv("../../.env")
 NEPTUNE_PROJECT = os.getenv("NEPTUNE_PROJECT")
