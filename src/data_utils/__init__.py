@@ -33,6 +33,10 @@ SECTION_KEYS = {
     "Stability": "Stability",
     "Outdoor testing": "Outdoor",
 }
+"""dict: Dictionary of section names and their corresponding shorthand.
+
+The shorhand is used as a prefix for feature names.
+"""
 
 NAN_EQUIVALENTS = {
     'Unknown': None,
@@ -51,23 +55,59 @@ NAN_EQUIVALENTS = {
     'Nan; Nan': None,
     'nan; nan': None
 }
+"""dict: Keys are equivalent to `missing` or `nan` values in the dataset."""
 
 
 def _search_parents(path, depth=2):
+    """Given a relative path search its parents until it's found from the current working directory.
+
+    This allows a folder name to be input and the relative path from the current working directory to be found.
+
+    Args:
+        path (str): The child directory.
+        depth (int, optional): The maximum number of steps out of the child directory. Defaults to 2.
+
+    Returns:
+        str: A vaild relative path to the child directory. 
+
+    Raises:
+        FileNotFoundError: If the path is not found.
+
+    """
     for x in range(depth):
         if os.path.exists(path):
             return path
         path = os.path.join('../', path)
-    return path
+    if os.path.exists(path):
+        return path
+    return FileNotFoundError(f"Path not found: {path}")
 
 
 class PerovskiteData():
+    """Stores the unprocessed perovskite data.
+    
+    Attributes:
+        ref (dataframe): The reference data for features
+            - Field
+            - Type
+            - Default
+            - Unit
+            - Pattern
+            - Implemented
+            - Description
+            - Concerns
+        data (dataframe): The unprocessed data.
+        ref_file (str): The name of the reference data file.
+        database_file (str): The name of the database file.
+
+    """
     ref = None
     data = None
     ref_file = 'pdp_units_data.xlsx'
     database_file = 'Perovskite_database.csv'
 
     def load_data(self):
+        """Loads the reference and database data."""
         if self.data is None:
             print("Loading Perovskite Data...")
             database_path = os.path.join('data/', self.database_file)
@@ -84,6 +124,19 @@ class PerovskiteData():
         print("Data Initialized.")
 
     def get_Xy(self, data, target):
+        """ Returns a masked version of the data and target series.
+        
+        Masks data against the target series excluding NaN target values.
+        
+        Args:
+            data (dataframe): The perovskite data.
+            target (str): The name of the target feature.
+            
+        Returns:
+            dataframe: The masked data.
+            series: The masked target.
+            
+        """
         # Mask data against target. Target values cannot be NaN
         mask = self.data[target].notna()
         X = data[mask]
@@ -92,9 +145,11 @@ class PerovskiteData():
 
 
 DATASET = PerovskiteData()
+"""An instance of the Perovskite Dataset."""
 
 
 def _column_selector(pat, nonpat):
+    """[DEPRICATED]"""
     patterned = [col for col in pat]
     categorical = []
     numerical = []
@@ -112,6 +167,7 @@ def _column_selector(pat, nonpat):
 
 
 def _to_numeric(col):
+    """Internal function for converting column data to numeric values."""
     col_types = col.apply(type)
     if not np.any((col_types == bool)):
         return pd.to_numeric(col, errors='ignore')
@@ -119,12 +175,39 @@ def _to_numeric(col):
 
 
 def hash_params(params: dict):
+    """Encodes preprocessing parameters into a hash. Is used to create unique file names for preprocessed data.
+
+    Args:
+        params (dict): The preprocessing parameters.
+
+    Returns:
+        str: The hash of the parameters.
+
+    """
     param_str = '_'.join(f'{key}={value}' for key,
                          value in sorted(params.items()))
     return hashlib.md5(param_str.encode()).hexdigest()
 
 
 def preprocess_data(target, threshold, depth, exclude_sections=[], exclude_cols=[], verbose: bool = True):
+    """Runs the entire preprocessing pipeline for the dataset.
+    
+    Args:
+        target (str): Name of the target feature
+        threshold (float): Threshold (%) for the feature density.
+            Used to remove sparce data.
+        depth (float): Threshold (%) for the feature layer density.
+            Determines how many feature layers are extracted.
+        exclude_sections (list of str, optional): List of sections to be excluded.
+            Defaults to [].
+        exclude_cols (list of str, optional): List of columns to be excluded.
+            Defaults to [].
+            
+    Returns:
+        dataframe: The preprocessed data.
+        series: The target data.
+
+    """
     global SECTION_KEYS
     global DATASET
     DATASET.load_data()
@@ -189,5 +272,6 @@ def preprocess_data(target, threshold, depth, exclude_sections=[], exclude_cols=
 
 
 def display_scores(scores):
+    """Print formatted Mean and Std"""
     print("Scores: {0}\nMean: {1:.3f}\nStd: {2:.3f}".format(
         scores, np.mean(scores), np.std(scores)))
