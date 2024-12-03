@@ -85,7 +85,7 @@ def _search_parents(path, depth=2):
 
 class PerovskiteData():
     """Stores the unprocessed perovskite data.
-    
+
     Attributes:
         ref (dataframe): The reference data for features
             - Field
@@ -125,17 +125,17 @@ class PerovskiteData():
 
     def get_Xy(self, data, target):
         """ Returns a masked version of the data and target series.
-        
+
         Masks data against the target series excluding NaN target values.
-        
+
         Args:
             data (dataframe): The perovskite data.
             target (str): The name of the target feature.
-            
+
         Returns:
             dataframe: The masked data.
             series: The masked target.
-            
+
         """
         # Mask data against target. Target values cannot be NaN
         mask = self.data[target].notna()
@@ -146,24 +146,6 @@ class PerovskiteData():
 
 DATASET = PerovskiteData()
 """An instance of the Perovskite Dataset."""
-
-
-def _column_selector(pat, nonpat):
-    """[DEPRICATED]"""
-    patterned = [col for col in pat]
-    categorical = []
-    numerical = []
-    for col in nonpat:
-        col_types = nonpat[col].apply(type)
-        if np.any((col_types == bool) | (col_types == object) | (col_types == str)):
-            categorical.append(col)
-        else:
-            numerical.append(col)
-    return {
-        'patterned': patterned,
-        'categorical': categorical,
-        'numerical': numerical
-    }
 
 
 def _to_numeric(col):
@@ -191,7 +173,7 @@ def hash_params(params: dict):
 
 def preprocess_data(target, threshold, depth, exclude_sections=[], exclude_cols=[], verbose: bool = True):
     """Runs the entire preprocessing pipeline for the dataset.
-    
+
     Args:
         target (str): Name of the target feature
         threshold (float): Threshold (%) for the feature density.
@@ -202,7 +184,7 @@ def preprocess_data(target, threshold, depth, exclude_sections=[], exclude_cols=
             Defaults to [].
         exclude_cols (list of str, optional): List of columns to be excluded.
             Defaults to [].
-            
+
     Returns:
         dataframe: The preprocessed data.
         series: The target data.
