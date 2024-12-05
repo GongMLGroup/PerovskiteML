@@ -140,11 +140,13 @@ def preprocess_data(target, threshold, depth, exclude_sections=[], exclude_cols=
     # Generate file name from parameters
     file_hash = hash_params(params)
     file_name = f'expanded_data_d{depth}_t{threshold}_{file_hash}.parquet'
-    file_path = _search_parents('data/preprocessed')
-    file_path = os.path.join(file_path, file_name)
+    folder_path = _search_parents('data/preprocessed')
+    file_path = os.path.join(folder_path, file_name)
 
-    # Check if file exists
-    if os.path.exists(file_path):
+    if not os.path.exists(folder_path):
+        os.mkdir(folder_path)
+    elif os.path.exists(file_path):
+        # Check if file exists
         print(f'File already exists: {file_path}')
         print('Loading Data...')
         table = pq.read_table(file_path)
