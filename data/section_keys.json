@@ -1,1 +1,18 @@
-{"Reference information":"Ref","Cell definition":"Cell","Module definition":"Module","Substrate":"Substrate","Electron transport layer":"ETL","The perovskite":"Perovskite","Perovskite deposition":"Perovskite","Hole transport layer":"HTL","Back contact":"Backcontact","Additional layers":"Add_lay","Encapsulation":"Encapsulation","JV data":"JV","Stabilised efficiency":"Stabilised","Quantum efficiency":"EQE","Stability":"Stability","Outdoor testing":"Outdoor"}
+{
+  "Reference information": "Ref",
+  "Cell definition": "Cell",
+  "Module definition": "Module",
+  "Substrate": "Substrate",
+  "Electron transport layer": "ETL",
+  "The perovskite": "Perovskite",
+  "Perovskite deposition": "Perovskite",
+  "Hole transport layer": "HTL",
+  "Back contact": "Backcontact",
+  "Additional layers": "Add_lay",
+  "Encapsulation": "Encapsulation",
+  "JV data": "JV",
+  "Stabilised efficiency": "Stabilised",
+  "Quantum efficiency": "EQE",
+  "Stability": "Stability",
+  "Outdoor testing": "Outdoor"
+}
