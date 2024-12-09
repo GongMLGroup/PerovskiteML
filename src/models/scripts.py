@@ -8,5 +8,5 @@ if nb_dir not in sys.path:
     sys.path.append(nb_dir)
 
 # Import util scripts
-from data_utils import *
+from utils import *
 print("Data utils loaded")
