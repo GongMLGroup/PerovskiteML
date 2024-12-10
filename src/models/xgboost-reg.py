@@ -57,7 +57,7 @@ run['seed'] = seed
 run['parameters'] = parameters
 
 ##--- Process target data ---##
-X, y = preprocess_data(**parameters['preprocessor'], verbose=False)
+X, y = DATASET.preprocess(**parameters['preprocessor'], verbose=False)
 print(f"{X.shape[1]} features")
 
 # Define the preprocessor
