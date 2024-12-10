@@ -2,8 +2,8 @@
 import os
 import sys
 
-# Add current directory to system path
-nb_dir = os.path.split(os.getcwd())[0]
+# Add src directory to system path
+nb_dir = os.path.dirname(os.path.dirname(__file__))
 if nb_dir not in sys.path:
     sys.path.append(nb_dir)
 
