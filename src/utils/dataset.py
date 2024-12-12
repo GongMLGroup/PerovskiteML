@@ -7,12 +7,13 @@ import pyarrow.parquet as pq
 from .fileutils import DATA_DIR, hash_params
 from .preprocess import preprocess_data
 
+
 class PerovskiteData():
     """Stores the unprocessed perovskite data.
 
     Attributes:
         data (dataframe): The unprocessed data.
-        ref (dataframe): The reference data for features
+        ref (dataframe): The reference data for features.
             - Field
             - Type
             - Default
@@ -23,12 +24,19 @@ class PerovskiteData():
             - Concerns
         database_file (str): The name of the database file.
         ref_file (str): The name of the reference data file.
+        nan_equivalents (dict): Equivalent values for NaN in the dataset.
+        section_keys (dict): Dictionary of section names and their corresponding shorthand.
+        X (dataframe): The preprocessed and masked data.
+            Stored after preprocess() is called.
+        y (series): The masked target
+            Stored after preprocess() is called.
 
     Raises:
         ValueError: If both ref and ref_file are None.
         ValueError: If both data and database_file are None.
 
     """
+
     def __init__(self, ref=None, data=None, ref_file=None, database_file=None, nan_equivalents={}, section_keys={}):
         if (ref is None) and (ref_file is None):
             ValueError("ref or ref_file must be provided")
@@ -61,7 +69,7 @@ class PerovskiteData():
         print("Data Initialized.")
 
     def get_Xy(self, data, target):
-        """ Returns a masked version of the data and target series.
+        """Returns a masked version of the data and target series.
 
         Masks data against the target series excluding NaN target values.
 
@@ -81,12 +89,33 @@ class PerovskiteData():
         return X, y
 
     def set_Xy(self, data, target):
+        """Calls `getXy(data, target)` and stores the output."""
         X, y = self.get_Xy(data, target)
         self.X = X
         self.y = y
         return X, y
-    
+
     def preprocess(self, target, threshold, depth, exclude_sections=[], exclude_cols=[], verbose: bool = True):
+        """Generates a preprocessed version of the dataset.
+        
+        If an unseen set of hyperparameters is used to generate the preprocessed dataset, it is saved for future use. Otherwise, the previously generated file is loaded and returned instead.
+        
+        Args:
+            target (str): Name of the target feature
+            threshold (float): Threshold (%) for the feature density.
+                Used to remove sparce data.
+            depth (float): Threshold (%) for the feature layer density.
+                Determines how many feature layers are extracted.
+            exclude_sections (list of str, optional): List of sections to be excluded.
+                Defaults to [].
+            exclude_cols (list of str, optional): List of columns to be excluded.
+                Defaults to [].
+
+        Returns:
+            dataframe: The preprocessed data.
+            series: The target data.
+
+        """
         self.load_data()
 
         params = {
@@ -111,7 +140,7 @@ class PerovskiteData():
             print('Loading Data...')
             table = pq.read_table(file_path)
             return self.set_Xy(table.to_pandas(), target)
-        
+
         # Remove excluded keys
         sections = copy.copy(self.section_keys)
         for key in exclude_sections:
@@ -120,7 +149,7 @@ class PerovskiteData():
         print(f"File does not exist, preprocessing and saving to {file_path}")
         print("Preprocessing Data...")
         print(f"Threshold: {threshold}, Depth: {depth}")
-        
+
         data = preprocess_data(
             self.data,
             self.ref,
@@ -131,7 +160,7 @@ class PerovskiteData():
             nan_equivalents=self.nan_equivalents,
             verbose=verbose
         )
-        
+
         # Save Data
         print(f"Saving Data to {file_path}...")
         table = pa.Table.from_pandas(data)
@@ -140,6 +169,5 @@ class PerovskiteData():
                         for key, value in params.items()})
         pq.write_table(table.replace_schema_metadata(metadata), file_path)
         print("Data Saved.")
-        
-        return self.set_Xy(data, target)
 
+        return self.set_Xy(data, target)

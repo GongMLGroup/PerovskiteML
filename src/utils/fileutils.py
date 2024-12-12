@@ -2,6 +2,7 @@ import os
 import hashlib
 
 def _updir(path, depth=1):
+    """Finds the directory `depth` number of steps above the given path."""
     for _ in range(depth):
         path = os.path.dirname(path)
     return path

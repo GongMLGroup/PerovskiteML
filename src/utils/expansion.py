@@ -1,3 +1,26 @@
+"""This module contains methods to decode layer data from the strings given by certain features.
+
+Many features in the Perovskite Database contain information about the device layers encoded using patterns:
+    Cell_stack_sequence: "SLG | FTO | TiO2-c | TiO2-mp | Perovskite | Spiro-MeOTAD | Au"
+    ETL_deposition_synthesis_atmosphere: "Vacuum | Vacuum >> Vacuum"
+
+The decoding methods are used to expand this layer data into individual features. The **Depth Threshold**, one of the preprocessing hyperparameters, is used to restrict the sparcity of these features.
+
+From the Perovskite database reference document:
+    ### The vertical bar, i.e. (‘ | ‘)
+    If a filed contains data for more than one layer, the data belonging to the different layers is separated by a
+    vertical bar with a space on both sides, i.e. (‘ | ‘)
+    Layers are sorted left to right with the substrate first, i.e. to the left.
+    
+    ### The semicolon. i.e. (‘ ; ‘)
+    If several materials, solvents, gases, etc. are occurring in one layer or during one reaction step, e.g. A and
+    B, are listed in alphabetic order and separated with semicolons, as in (A; B)
+    
+    ### The double forward angel bracket, i.e. (‘ >> ‘)
+    When a layer in a stack is deposited, there may be more than one reaction step involved. If that is the case,
+    the information concerning the different reaction steps, e.g. A, and B, are separated by a double forward
+    angel bracket with one blank space on both sides, as in (‘A >> B‘)
+"""
 import re
 import pandas as pd
 import numpy as np

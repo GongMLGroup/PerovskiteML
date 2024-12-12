@@ -14,22 +14,24 @@ def _to_numeric(col):
 
 
 def preprocess_data(data, ref, threshold, depth, sections=[], exclude_cols=[], nan_equivalents={}, verbose: bool = True):
-    """Runs the entire preprocessing pipeline for the dataset.
+    """Runs the entire preprocessing pipeline for the given data.
 
     Args:
-        target (str): Name of the target feature
+        data (dataframe): The perovskite data.
+        ref (dataframe): The reference data for features.
         threshold (float): Threshold (%) for the feature density.
             Used to remove sparce data.
         depth (float): Threshold (%) for the feature layer density.
             Determines how many feature layers are extracted.
-        exclude_sections (list of str, optional): List of sections to be excluded.
+        sections (list of str, optional): List of sections to be included.
             Defaults to [].
         exclude_cols (list of str, optional): List of columns to be excluded.
             Defaults to [].
+        nan_equivalents (dict, optional): Equivalent values for NaN in the dataset.
+            Defaults to {}.
 
     Returns:
         dataframe: The preprocessed data.
-        series: The target data.
 
     """
     patterned, nonpatterned = partition_by_pattern(ref, sections)
