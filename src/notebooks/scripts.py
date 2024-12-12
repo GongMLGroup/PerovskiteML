@@ -8,5 +8,5 @@ if nb_dir not in sys.path:
     sys.path.append(nb_dir)
 
 # Import util scripts
-from utils import *
+from utils import DATASET, NEPTUNE_API_TOKEN, NEPTUNE_PROJECT, PerovskiteData, PROJECT_DIR
 print("Data utils loaded")
