@@ -12,7 +12,7 @@ end
 
 # Load PDP Data Set
 dataset = let 
-	path = abspath(joinpath(pwd(),"data/Perovskite_database_content_all_data_040524.csv"))
+	path = abspath(joinpath(pwd(),"data/raw/Perovskite_database_content_all_data_040524.csv"))
 	DataFrame(CSV.File(path))
 end
 

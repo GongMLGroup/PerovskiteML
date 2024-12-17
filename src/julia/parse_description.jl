@@ -56,7 +56,7 @@ const DEFAULT_KEYS = Dict(
 )
 
 # Extract lines into sections
-filepath = joinpath(pwd(), "data\\pdp_description_5.4.txt")
+filepath = joinpath(pwd(), "data\\raw\\pdp_description_5.4.txt")
 description, filestring = open(filepath, "r") do file
     sections = collect(keys(SECTIONS_KEYS))
     description = OrderedDict()

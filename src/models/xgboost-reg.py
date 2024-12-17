@@ -1,7 +1,3 @@
-# --- How to run ---
-# cd src\models\
-# python xgboost-reg.py
-# ------------------
 import numpy as np
 import pandas as pd
 import xgboost as xgb
@@ -19,19 +15,26 @@ from neptune.types import File
 import matplotlib.pyplot as plt
 
 # import custom scripts
-from scripts import *
+from scripts import NEPTUNE_PROJECT, NEPTUNE_API_TOKEN, DATASET
 
+###--- Initialization of the Model run ---###
+# Initialize the neptune run with the project name and api token
 run = neptune.init_run(
     project=NEPTUNE_PROJECT,
     api_token=NEPTUNE_API_TOKEN
 )
+# Create the neptune callback function to log our run
 neptune_callback = NeptuneCallback(
     run=run,
     log_importance=False,
-    log_tree=[0,1,2,3]
+    log_tree=None
 )
 
+# Set seed to keep results reproducible
 seed = 42
+run['seed'] = seed # logs the seed in neptune
+
+# Preprocessor and model parameters.
 parameters = {
     'preprocessor': {
         'target': "JV_default_PCE",
@@ -50,38 +53,55 @@ parameters = {
     },
     'model': {
         'objective': "reg:squarederror",
-        'eval_metric': ["mae", "rmse"]
-    }
+        'eval_metric': ["mae", "rmse"],
+        'max_depth': 6,
+        'eta': 0.3, # Learning rate
+    } # Model parameters for XGBoost. More parameters can be added.
+    # https://xgboost.readthedocs.io/en/stable/parameter
 }
-run['seed'] = seed
-run['parameters'] = parameters
+run['parameters'] = parameters # logs the parameters in neptune
+num_round = 300 # Number iterations for the training algorithm.
 
-##--- Process target data ---##
-X, y = preprocess_data(**parameters['preprocessor'], verbose=False)
+###--- Initialize the Preprocessor ---###
+
+# Generate preprocessed data
+X, y = DATASET.preprocess(**parameters['preprocessor'], verbose=False)
 print(f"{X.shape[1]} features")
 
 # Define the preprocessor
-encoder = OrdinalEncoder(handle_unknown='use_encoded_value', unknown_value=-1)
-numerical_selector = make_column_selector(dtype_include=np.number)
-categorical_selector = make_column_selector(dtype_include=[bool, object])
-preprocessor = ColumnTransformer([
-    ('numerical', 'passthrough', numerical_selector),
-    ('categorical', encoder, categorical_selector),
-])
+encoder = OrdinalEncoder(
+    handle_unknown='use_encoded_value', 
+    unknown_value=-1
+) # Encodes categorical data using an ordinal encoder.
+# https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.OrdinalEncoder
 
-# Transform data to have named Columns
-all_columns = list(X.select_dtypes(np.number).columns) + list(X.select_dtypes([bool, object]).columns)
-X_transformed = pd.DataFrame(preprocessor.fit_transform(X, y))
-X_transformed.columns = all_columns
+numerical_selector = make_column_selector(
+    dtype_include=np.number
+) # Selects the numerical features.
+categorical_selector = make_column_selector(
+    dtype_include=[bool, object]
+) # Selects the categorical features.
+
+preprocessor = ColumnTransformer([
+    ('numerical', 'passthrough', numerical_selector), # Allows numerical features to pass.
+    ('categorical', encoder, categorical_selector), # Encodes categorical features.
+]) # Transforms numerical and categorical data separately.
+
+# The preprocessor creates a transformed version of the data without human readable feature name. Replace these with the original feature names.
+all_columns = list(X.select_dtypes(np.number).columns) + list(X.select_dtypes([bool, object]).columns) # Create a list of feature names.
+
+X_transformed = pd.DataFrame(preprocessor.fit_transform(X, y)) # Transform data
+X_transformed.columns = all_columns # Replace column names
+
 X_train, X_test, y_train, y_test = train_test_split(
     X_transformed, y, test_size=0.30, random_state=seed
-)
+) # Create the training and testing split of data
 
-##--- Define the Model ---##
+###--- Define the Model ---###
+# https://xgboost.readthedocs.io/en/stable/python/python_intro.html
 dtrain = xgb.DMatrix(X_train, label=y_train)
 dval = xgb.DMatrix(X_test, label=y_test)
-evals = [(dtrain, 'train'), (dval, "valid")]
-num_round = 300
+evals = [(dtrain, 'train'), (dval, 'valid')] # evaluations that log to neptune.
 model = xgb.train(
     params=parameters['model'],
     dtrain=dtrain,
@@ -89,11 +109,11 @@ model = xgb.train(
     evals=evals,
     callbacks=[
         neptune_callback,
-        xgb.callback.EarlyStopping(rounds=30)
+        # xgb.callback.EarlyStopping(rounds=100) # Early stopping option
     ]
-)
+) # Trains the model and logs to neptune.
 
-# generate predictions
+# Generate predictions from the trained model.
 y_pred = model.predict(dval)
 pred_actual = pd.DataFrame({
     'y_true': y_test,
@@ -103,11 +123,11 @@ csv_buffer = StringIO()
 pred_actual.to_csv(csv_buffer, index=False)
 run['training/data/predictions'].upload(File.from_stream(csv_buffer, extension="csv"))
 
-# generate shap values
+# Generate shap values
 explainer = shap.TreeExplainer(model)
 shap_values = explainer.shap_values(X_transformed)
 
-# plotting
+# Plotting
 fig = plt.figure()
 shap.summary_plot(
     shap_values[:1000, :],
