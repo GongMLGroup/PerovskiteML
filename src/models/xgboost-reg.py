@@ -60,6 +60,7 @@ parameters = {
     # https://xgboost.readthedocs.io/en/stable/parameter
 }
 run['parameters'] = parameters # logs the parameters in neptune
+num_round = 300 # Number iterations for the training algorithm.
 
 ###--- Initialize the Preprocessor ---###
 
@@ -101,7 +102,6 @@ X_train, X_test, y_train, y_test = train_test_split(
 dtrain = xgb.DMatrix(X_train, label=y_train)
 dval = xgb.DMatrix(X_test, label=y_test)
 evals = [(dtrain, 'train'), (dval, 'valid')] # evaluations that log to neptune.
-num_round = 300 # Number iterations
 model = xgb.train(
     params=parameters['model'],
     dtrain=dtrain,
