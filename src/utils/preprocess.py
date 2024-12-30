@@ -3,6 +3,7 @@ import pandas as pd
 
 from .expansion import expand_dataset
 from .reduction import reduce_data, partition_by_pattern
+from .logger import data_logger, setup_logger
 
 
 def _to_numeric(col):
@@ -13,7 +14,7 @@ def _to_numeric(col):
     return col
 
 
-def preprocess_data(data, ref, threshold, depth, sections=[], exclude_cols=[], nan_equivalents={}, verbose: bool = True):
+def preprocess_data(data, ref, threshold, depth, sections=[], exclude_cols=[], nan_equivalents={}, verbosity: int = 0):
     """Runs the entire preprocessing pipeline for the given data.
 
     Args:
@@ -29,11 +30,17 @@ def preprocess_data(data, ref, threshold, depth, sections=[], exclude_cols=[], n
             Defaults to [].
         nan_equivalents (dict, optional): Equivalent values for NaN in the dataset.
             Defaults to {}.
+        verbosity (int, optional): Verbosity level.
+            Defaults to 0.
 
     Returns:
         dataframe: The preprocessed data.
 
     """
+    setup_logger(verbosity)
+    data_logger.info("Preproccessing Data.")
+    data_logger.debug(f"Threshold: {threshold}, Depth: {depth}")
+    
     patterned, nonpatterned = partition_by_pattern(ref, sections)
 
     patterned_data = reduce_data(data[patterned], percent=threshold)
@@ -43,10 +50,13 @@ def preprocess_data(data, ref, threshold, depth, sections=[], exclude_cols=[], n
     nonpatterned_data.drop(columns=exclude_cols, inplace=True, errors='ignore')
 
     expanded_data = expand_dataset(
-        patterned_data, percent=depth, verbose=verbose)
-    print("Data Preprocessed.")
+        patterned_data, percent=depth, verbosity=verbosity)
+    
     data = pd.concat([expanded_data, nonpatterned_data], axis=1)
     data.replace(nan_equivalents, inplace=True)
     data = data.apply(_to_numeric)
+    
+    data_logger.info("Preprocessing Complete.")
+    data_logger.info(f"Data Shape: {data.shape}")
 
     return data

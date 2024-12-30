@@ -6,6 +6,7 @@ import pyarrow.parquet as pq
 
 from .fileutils import DATA_DIR, hash_params
 from .preprocess import preprocess_data
+from .logger import data_logger, setup_logger
 
 
 class PerovskiteData():
@@ -51,22 +52,23 @@ class PerovskiteData():
         self.X = None
         self.y = None
 
-    def load_data(self):
+    def load_data(self, verbosity: int = 0):
+        setup_logger(verbosity)
         """Loads the reference and database data."""
         if self.data is None:
-            print("Loading Perovskite Data...")
+            data_logger.info("Loading Perovskite Data.")
             if not os.path.isabs(self.database_file):
                 self.database_file = os.path.join(DATA_DIR, self.database_file)
             self.data = pd.read_csv(self.database_file, low_memory=False)
             self.data.replace(self.nan_equivalents, inplace=True)
 
         if self.ref is None:
-            print("Loading Reference Data...")
+            data_logger.info("Loading Reference Data.")
             if not os.path.isabs(self.ref_file):
                 self.ref_file = os.path.join(DATA_DIR, self.ref_file)
             self.ref = pd.read_excel(self.ref_file, sheet_name=None)
 
-        print("Data Initialized.")
+        data_logger.info("Data Loaded.")
 
     def get_Xy(self, data, target):
         """Returns a masked version of the data and target series.
@@ -95,7 +97,7 @@ class PerovskiteData():
         self.y = y
         return X, y
 
-    def preprocess(self, target, threshold, depth, exclude_sections=[], exclude_cols=[], verbose: bool = True):
+    def preprocess(self, target, threshold, depth, exclude_sections=[], exclude_cols=[], save: bool = True, verbosity: int = 0):
         """Generates a preprocessed version of the dataset.
         
         If an unseen set of hyperparameters is used to generate the preprocessed dataset, it is saved for future use. Otherwise, the previously generated file is loaded and returned instead.
@@ -110,13 +112,17 @@ class PerovskiteData():
                 Defaults to [].
             exclude_cols (list of str, optional): List of columns to be excluded.
                 Defaults to [].
+            save (bool, optional): Whether to save the preprocessed data.
+                Defaults to True.
+            verbosity (int, optional): Verbosity level.
+                Defaults to 0.
 
         Returns:
             dataframe: The preprocessed data.
             series: The target data.
 
         """
-        self.load_data()
+        self.load_data(verbosity=verbosity)
 
         params = {
             'target': target,
@@ -136,9 +142,10 @@ class PerovskiteData():
             os.mkdir(folder_path)
         elif os.path.exists(file_path):
             # Check if file exists
-            print(f'File already exists: {file_path}')
-            print('Loading Data...')
+            data_logger.info("File already exists.")
+            data_logger.debug(f"Found at: {file_path}")
             table = pq.read_table(file_path)
+            data_logger.info("Preprocessed data Loaded.")
             return self.set_Xy(table.to_pandas(), target)
 
         # Remove excluded keys
@@ -146,9 +153,7 @@ class PerovskiteData():
         for key in exclude_sections:
             del sections[key]
 
-        print(f"File does not exist, preprocessing and saving to {file_path}")
-        print("Preprocessing Data...")
-        print(f"Threshold: {threshold}, Depth: {depth}")
+        data_logger.info("File does not exist.")
 
         data = preprocess_data(
             self.data,
@@ -158,16 +163,18 @@ class PerovskiteData():
             sections=sections,
             exclude_cols=exclude_cols,
             nan_equivalents=self.nan_equivalents,
-            verbose=verbose
+            verbosity=verbosity
         )
 
         # Save Data
-        print(f"Saving Data to {file_path}...")
-        table = pa.Table.from_pandas(data)
-        metadata = table.schema.metadata or {}
-        metadata.update({key.encode(): str(value).encode()
-                        for key, value in params.items()})
-        pq.write_table(table.replace_schema_metadata(metadata), file_path)
-        print("Data Saved.")
+        if save:
+            data_logger.info("Saving Data.")
+            data_logger.debug(f"Saving to: {file_path}")
+            table = pa.Table.from_pandas(data)
+            metadata = table.schema.metadata or {}
+            metadata.update({key.encode(): str(value).encode()
+                            for key, value in params.items()})
+            pq.write_table(table.replace_schema_metadata(metadata), file_path)
+            data_logger.info("Data Saved.")
 
         return self.set_Xy(data, target)
