@@ -141,7 +141,7 @@ def generate_name(leaf, name=None):
         name = _set_name(name, leaf)
         return name
 
-    is_match = re.search("_(\d+)", leaf.name)
+    is_match = re.search(r"_(\d+)", leaf.name)
     if is_match:
         name = _set_name(name, leaf)
 
@@ -154,23 +154,23 @@ def leaf_matrix(root):
     return pd.DataFrame(leaves.transpose(), columns=columns)
 
 
-def expand_data(name: str, data, percent: float = 1.0, verbose: bool = False):
+def expand_data(name: str, data, percent: float = 1.0, verbosity: int = 0):
     tree = feature_tree(name, data, percent=percent)
-    if verbose:
+    if verbosity > 2:
         tree.show()
     return leaf_matrix(tree)
 
 
-def expand_dataset(data, features=None, percent: float = 1.0, verbose: bool = False):
+def expand_dataset(data, features=None, percent: float = 1.0, verbosity: int = 0):
     if features is None:
         features = data.columns
     expanded_data = []
     if type(features) is dict:
         for (feature, name) in features.items():
             expanded_data.append(expand_data(
-                name, data[feature], percent=percent, verbose=verbose))
+                name, data[feature], percent=percent, verbosity=verbosity))
     else:
         for feature in features:
             expanded_data.append(expand_data(
-                feature, data[feature], percent=percent, verbose=verbose))
+                feature, data[feature], percent=percent, verbosity=verbosity))
     return pd.concat(expanded_data, axis=1)

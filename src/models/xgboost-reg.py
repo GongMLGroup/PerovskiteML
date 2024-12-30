@@ -1,3 +1,4 @@
+import neptune.utils
 import numpy as np
 import pandas as pd
 import xgboost as xgb
@@ -11,6 +12,7 @@ from sklearn.model_selection import train_test_split
 import neptune
 from neptune.integrations.xgboost import NeptuneCallback
 from neptune.types import File
+from neptune.utils import stringify_unsupported
 
 import matplotlib.pyplot as plt
 
@@ -59,14 +61,13 @@ parameters = {
     } # Model parameters for XGBoost. More parameters can be added.
     # https://xgboost.readthedocs.io/en/stable/parameter
 }
-run['parameters'] = parameters # logs the parameters in neptune
+run['parameters'] = stringify_unsupported(parameters) # logs the parameters in neptune
 num_round = 300 # Number iterations for the training algorithm.
 
 ###--- Initialize the Preprocessor ---###
 
 # Generate preprocessed data
-X, y = DATASET.preprocess(**parameters['preprocessor'], verbose=False)
-print(f"{X.shape[1]} features")
+X, y = DATASET.preprocess(**parameters['preprocessor'], verbosity=2)
 
 # Define the preprocessor
 encoder = OrdinalEncoder(
