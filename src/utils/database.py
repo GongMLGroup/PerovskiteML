@@ -1,10 +1,11 @@
 import os
 import copy
+import json
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from .fileutils import DATA_DIR, hash_params
+from .fileutils import PROJECT_DIR, DATA_DIR, hash_params
 from .preprocess import preprocess_data
 from .logger import data_logger, setup_logger
 
@@ -178,3 +179,22 @@ class PerovskiteData():
             data_logger.info("Data Saved.")
 
         return self.set_Xy(data, target)
+    
+
+with open(os.path.join(PROJECT_DIR,"data/section_keys.json"), "r") as file:
+    SECTION_KEYS = json.load(file)
+    """dict: Dictionary of section names and their corresponding shorthand.
+
+    The shorhand is used as a prefix for feature names.
+    """
+with open(os.path.join(PROJECT_DIR,"data/nan_equivalents.json"), "r") as file:
+    NAN_EQUIVALENTS = json.load(file)
+    """dict: Keys are equivalent to `missing` or `nan` values in the dataset."""
+
+DATASET = PerovskiteData(
+    ref_file="pdp_units_data.xlsx",
+    database_file="Perovskite_database.csv",
+    nan_equivalents=NAN_EQUIVALENTS,
+    section_keys=SECTION_KEYS
+)
+"""An instance of the Perovskite Dataset."""

@@ -25,6 +25,9 @@ import re
 import pandas as pd
 import numpy as np
 from bigtree import Node
+from .reduction import find_sparsity, sort_by_sparsity, is_valid_pattern
+
+
 
 DEPTH_NAMES = {
     0: 'Layer',
@@ -174,3 +177,36 @@ def expand_dataset(data, features=None, percent: float = 1.0, verbosity: int = 0
             expanded_data.append(expand_data(
                 feature, data[feature], percent=percent, verbosity=verbosity))
     return pd.concat(expanded_data, axis=1)
+
+
+def expand_sort(data, ref):
+    data.reset_index(drop=True, inplace=True)
+    expanded_data = []
+    features = []
+    valid_pattern_mask = is_valid_pattern(ref)
+    for (i, feature) in enumerate(ref['Field']):
+        if valid_pattern_mask[i]:
+            expanded_feature = expand_data(feature, data[feature])
+            if expanded_feature.shape[0] != 42258:
+                print(f"feature: {feature}")
+                print(f"shape: {expanded_feature.shape}")
+                
+            expanded_data.append(expanded_feature)
+            features.append({
+                'parent': feature,
+                'children': expanded_feature.columns.to_list(),
+                'sparsity': find_sparsity(data[feature]),
+            })
+        else:
+            if data[feature].shape[0] != 42258:
+                print(f"feature: {feature}")
+                print(f"shape: {data[feature].shape}")
+            expanded_data.append(data[feature])
+            features.append({
+                'parent': feature,
+                'children': [feature],
+                'sparsity': find_sparsity(data[feature]),
+            })
+    expanded_data = pd.concat(expanded_data, axis=1)
+    features = sort_by_sparsity(features)
+    return expanded_data, features

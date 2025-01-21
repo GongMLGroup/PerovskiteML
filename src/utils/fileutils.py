@@ -23,3 +23,4 @@ def hash_params(params: dict):
 
 PROJECT_DIR =  _updir(__file__, 3)
 DATA_DIR = os.path.join(PROJECT_DIR, 'data')
+EXPAND_DIR = os.path.join(DATA_DIR, 'expanded')

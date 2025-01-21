@@ -1,9 +1,28 @@
 import pandas as pd
 import numpy as np
+import bisect
 import re
 
 
-def passes_sparsity(column, percent=0.95):
+def find_sparsity(column):
+    total = len(column)
+    return float(column.isna().sum()/total)
+
+
+def sort_by_sparsity(features):
+    sparsity = [feature['sparsity'] for feature in features]
+    index = np.argsort(sparsity)
+    features = [features[i] for i in index]
+    return features
+
+
+def prune_by_sparsity(features, threshold):
+    index = bisect.bisect_left(
+        features, threshold, key=lambda x: x['sparsity'])
+    return features[:index]
+
+
+def passes_sparsity(column, percent=0.0):
     """Checks if a column of data passes the sparsity threshold.
 
     Args:
@@ -20,7 +39,7 @@ def passes_sparsity(column, percent=0.95):
     return column.notna().sum() >= target
 
 
-def reduce_data(data, percent=0.95):
+def reduce_data(data, percent=0.0):
     """Given a dataset return the columns which pass the given sparsity threshold.
 
     Args:
@@ -31,6 +50,8 @@ def reduce_data(data, percent=0.95):
         dataframe: The reduced data.
 
     """
+    if percent <= 0.0:
+        return data
     valid_columns = data.apply(passes_sparsity, args=(percent,))
     valid_mask = valid_columns.keys()[valid_columns.values]
     return data[valid_mask]
@@ -64,6 +85,12 @@ def has_concentrations(string):
     return matches_regex("concentrations", string)
 
 
+def is_valid_pattern(ref):
+    pattern_mask = ref['Pattern'].apply(is_pattern)
+    concentrations_mask = ref['Field'].apply(has_concentrations)
+    return pattern_mask & ~concentrations_mask
+
+
 def get_valid_patterns(ref, return_invalid: bool = True):
     """Finds the features which encode layer data with patterns. Returns the feature names.
 
@@ -76,9 +103,7 @@ def get_valid_patterns(ref, return_invalid: bool = True):
         list: patterned feature names.
         list: nonpatterned features names if return_invalid is True.
     """
-    pattern_mask = ref['Pattern'].apply(is_pattern)
-    concentrations_mask = ref['Field'].apply(has_concentrations)
-    valid_patterns = pattern_mask & ~concentrations_mask
+    valid_patterns = is_valid_pattern(ref)
     if return_invalid:
         return ref[valid_patterns]['Field'], ref[~valid_patterns]['Field']
     else:
@@ -87,12 +112,12 @@ def get_valid_patterns(ref, return_invalid: bool = True):
 
 def partition_by_pattern(refs, keys):
     """Given a subset of features, partition the features into a patterned and non-patterned set.
-    
+
     Args:
         refs (dict of dataframe): A set of references for each section of features.
             Sections include "Hole transport layer", "The perovskite", etc.
         keys (list): List of section names to be included in the partitioning.
-    
+
     Return:
         list: patterned features.
         list: nonpatterned features.
@@ -107,3 +132,18 @@ def partition_by_pattern(refs, keys):
     patterned = pd.concat(patterned)
     nonpatterned = pd.concat(nonpatterned)
     return patterned, nonpatterned
+
+
+def collect_features(features):
+    feature_array = []
+    for feature_set in features:
+        feature_array.extend(feature_set['children'])
+    return feature_array
+
+
+def section_features(sections, ref):
+    return [feature for section in sections for feature in ref[section]['Field']]
+
+
+def remove_features(features, remove):
+    return [feature for feature in features if feature['parent'] not in remove]
