@@ -4,7 +4,7 @@ import json
 import numpy as np
 
 from .fileutils import PROJECT_DIR
-from .dataset import PerovskiteData
+from .database import PerovskiteData
 
 dotenv.load_dotenv(os.path.join(PROJECT_DIR, ".env"))
 NEPTUNE_PROJECT = os.getenv("NEPTUNE_PROJECT")
