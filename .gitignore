@@ -24,6 +24,8 @@ venv.bak/
 
 # Preprocessed Data
 *.parquet
+expanded/
+preprocessed/
 
 # Neptune files
 *.neptune
