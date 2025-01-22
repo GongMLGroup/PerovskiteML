@@ -191,7 +191,7 @@ with open(os.path.join(PROJECT_DIR,"data/nan_equivalents.json"), "r") as file:
     NAN_EQUIVALENTS = json.load(file)
     """dict: Keys are equivalent to `missing` or `nan` values in the dataset."""
 
-DATASET = PerovskiteData(
+DATABASE = PerovskiteData(
     ref_file="pdp_units_data.xlsx",
     database_file="Perovskite_database.csv",
     nan_equivalents=NAN_EQUIVALENTS,

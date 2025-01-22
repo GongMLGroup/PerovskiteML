@@ -3,7 +3,7 @@ import dotenv
 import numpy as np
 
 from .fileutils import PROJECT_DIR
-from .database import DATASET
+from .database import DATABASE
 from .dataset import DataSet
 
 dotenv.load_dotenv(os.path.join(PROJECT_DIR, ".env"))

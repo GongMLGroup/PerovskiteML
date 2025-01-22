@@ -17,7 +17,7 @@ from neptune.utils import stringify_unsupported
 import matplotlib.pyplot as plt
 
 # import custom scripts
-from scripts import NEPTUNE_PROJECT, NEPTUNE_API_TOKEN, DATASET
+from scripts import NEPTUNE_PROJECT, NEPTUNE_API_TOKEN, DATABASE
 
 ###--- Initialization of the Model run ---###
 # Initialize the neptune run with the project name and api token
@@ -67,7 +67,7 @@ num_round = 300 # Number iterations for the training algorithm.
 ###--- Initialize the Preprocessor ---###
 
 # Generate preprocessed data
-X, y = DATASET.preprocess(**parameters['preprocessor'], verbosity=2)
+X, y = DATABASE.preprocess(**parameters['preprocessor'], verbosity=2)
 
 # Define the preprocessor
 encoder = OrdinalEncoder(

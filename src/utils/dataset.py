@@ -3,7 +3,7 @@ import json
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from .database import DATASET
+from .database import DATABASE
 from .fileutils import EXPAND_DIR
 from .reduction import prune_by_sparsity, collect_features, remove_features, section_features
 from .expansion import expand_sort
@@ -80,7 +80,7 @@ def generate_reference(refs):
     }
 
 
-def generate_dataset(target, database=DATASET, save=True):
+def generate_dataset(target, database=DATABASE, save=True):
     database.load_data()
     x, _ = database.get_Xy(database.data, target)
     if has_reference():
@@ -108,7 +108,7 @@ class DataSet():
     def collect_features(self):
         return collect_features(self.features)
 
-    def get_dataset(self, database=DATASET, save: bool = True):
+    def get_dataset(self, database=DATABASE, save: bool = True):
         if has_dataset(self.target):
             self.data, self.all_features, = load_dataset(self.target)
             self.reference = load_reference()
