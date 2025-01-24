@@ -8,4 +8,4 @@ if nb_dir not in sys.path:
     sys.path.append(nb_dir)
 
 # Import util scripts
-from utils import DATABASE, NEPTUNE_API_TOKEN, NEPTUNE_PROJECT, PROJECT_DIR
+from utils import DATABASE, NEPTUNE_API_TOKEN, NEPTUNE_PROJECT, PROJECT_DIR, DataSet

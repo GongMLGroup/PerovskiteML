@@ -142,7 +142,7 @@ def collect_features(features):
 
 
 def section_features(sections, ref):
-    return [feature for section in sections for feature in ref[section]['Field']]
+    return [feature for section in sections for feature in ref[section]]
 
 
 def remove_features(features, remove):

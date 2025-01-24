@@ -7,6 +7,8 @@ from .database import DATABASE
 from .fileutils import EXPAND_DIR
 from .reduction import prune_by_sparsity, collect_features, remove_features, section_features
 from .expansion import expand_sort
+from .preprocess import _to_numeric
+
 
 def has_dataset(target, in_path=EXPAND_DIR):
     target_path = os.path.join(in_path, target)
@@ -88,6 +90,7 @@ def generate_dataset(target, database=DATABASE, save=True):
     else:
         ref = generate_reference(database.ref)
     data, features = expand_sort(x, database.ref['Full Table'])
+    data = data.apply(_to_numeric)
     if save:
         save_reference(ref)
         save_dataset(data, features, target)
@@ -138,7 +141,7 @@ class DataSet():
         return
 
     def prune_by_sparsity(self, threshold):
-        self.features = prune_by_sparsity(self.all_features, threshold)
+        self.features = prune_by_sparsity(self.features, threshold)
         return
 
     def get_Xy(self):

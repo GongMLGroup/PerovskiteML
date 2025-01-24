@@ -10,7 +10,10 @@ def _to_numeric(col):
     """Internal function for converting column data to numeric values."""
     col_types = col.apply(type)
     if not np.any((col_types == bool)):
-        return pd.to_numeric(col, errors='ignore')
+        try:
+            return pd.to_numeric(col)
+        except ValueError:
+            return col
     return col
 
 
