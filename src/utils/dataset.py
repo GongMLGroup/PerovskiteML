@@ -96,13 +96,23 @@ def generate_dataset(target, database=DATABASE, save=True):
         save_dataset(data, features, target)
     return data, features, ref
 
+def generate_groups(target, group, database=DATABASE):
+    database.load_data()
+    x, _ = database.get_Xy(database.data, target)
+    return x[group].astype(str).to_list()
+    
+
 class DataSet():
-    def __init__(self, target):
+    def __init__(self, target, group_by=None):
         self.target = target
         self.data = None
         self.reference = None
         self.all_features = None
         self.features = None
+        if group_by is not None:
+            self.groups = generate_groups(target, group_by)
+        else:
+            self.groups = group_by
 
     def reset_features(self):
         self.features = self.all_features
