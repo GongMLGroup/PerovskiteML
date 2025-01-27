@@ -5,11 +5,29 @@ import re
 
 
 def find_sparsity(column):
+    """Finds the sparsity of a column of data.
+
+    Args:
+        column (series): Column to be checked.
+
+    Returns:
+        float: The sparsity of the data.
+    
+    """
     total = len(column)
     return float(column.isna().sum()/total)
 
 
 def sort_by_sparsity(features):
+    """Sorts a dictionary of features by their sparsity.
+    
+    Args:
+        features (dict): Dictionary of features to be sorted.
+        
+    Returns:
+        dict: Sorted dictionary of features.
+
+    """
     sparsity = [feature['sparsity'] for feature in features]
     index = np.argsort(sparsity)
     features = [features[i] for i in index]
@@ -17,6 +35,16 @@ def sort_by_sparsity(features):
 
 
 def prune_by_sparsity(features, threshold):
+    """Prunes a dictionary of features by their sparsity.
+    
+    Args:
+        features (dict): Dictionary of features to be pruned.
+        threshold (float): Threshold for the sparsity of the data.
+        
+    Returns:
+        dict: Pruned dictionary of features.
+        
+    """
     index = bisect.bisect_left(
         features, threshold, key=lambda x: x['sparsity'])
     return features[:index]
@@ -86,6 +114,15 @@ def has_concentrations(string):
 
 
 def is_valid_pattern(ref):
+    """Returns a mask of the features which encode layer data with patterns.
+    
+    Args:
+        ref (dataframe): The reference data for features.
+
+    Returns:
+        series: A mask of the features which encode layer data with patterns.
+
+    """
     pattern_mask = ref['Pattern'].apply(is_pattern)
     concentrations_mask = ref['Field'].apply(has_concentrations)
     return pattern_mask & ~concentrations_mask
@@ -135,6 +172,15 @@ def partition_by_pattern(refs, keys):
 
 
 def collect_features(features):
+    """Collects the expanded features from a dictionary of features.
+
+    Args:
+        features (dict): Dictionary of features.
+
+    Returns:
+        list: List of expanded features.
+
+    """
     feature_array = []
     for feature_set in features:
         feature_array.extend(feature_set['children'])
@@ -142,8 +188,28 @@ def collect_features(features):
 
 
 def section_features(sections, ref):
+    """Gets the features for a given section from a reference dictionary.
+    
+    Args:
+        sections (list): List of sections to be included.
+        ref (dict): The reference data for features.
+
+    Returns:
+        list: List of features for the given section.
+
+    """
     return [feature for section in sections for feature in ref[section]]
 
 
 def remove_features(features, remove):
+    """Removes features from a dictionary of features.
+
+    Args:
+        features (dict): Dictionary of features.
+        remove (list): List of features to be removed.
+
+    Returns:
+        dict: Dictionary of features without the removed features.
+        
+    """
     return [feature for feature in features if feature['parent'] not in remove]
