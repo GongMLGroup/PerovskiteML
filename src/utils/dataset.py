@@ -1,180 +1,372 @@
 import os
-import copy
-import pandas as pd
+import json
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from .fileutils import DATA_DIR, hash_params
-from .preprocess import preprocess_data
-from .logger import data_logger, setup_logger
+from .database import DATABASE
+from .fileutils import EXPAND_DIR
+from .reduction import prune_by_sparsity, collect_features, remove_features, section_features
+from .expansion import expand_sort
+from .preprocess import _to_numeric
 
 
-class PerovskiteData():
-    """Stores the unprocessed perovskite data.
+def has_dataset(target, in_path=EXPAND_DIR):
+    """Checks if a dataset exists for a given target feature.
+    
+    Args:
+        target (str): Name of the target feature.
+        in_path (str, optional): Path to the directory containing the dataset.
+            Defaults to EXPAND_DIR.
 
-    Attributes:
-        data (dataframe): The unprocessed data.
-        ref (dataframe): The reference data for features.
-            - Field
-            - Type
-            - Default
-            - Unit
-            - Pattern
-            - Implemented
-            - Description
-            - Concerns
-        database_file (str): The name of the database file.
-        ref_file (str): The name of the reference data file.
-        nan_equivalents (dict): Equivalent values for NaN in the dataset.
-        section_keys (dict): Dictionary of section names and their corresponding shorthand.
-        X (dataframe): The preprocessed and masked data.
-            Stored after preprocess() is called.
-        y (series): The masked target
-            Stored after preprocess() is called.
-
-    Raises:
-        ValueError: If both ref and ref_file are None.
-        ValueError: If both data and database_file are None.
-
+    Returns:
+        bool: True if the dataset exists. False otherwise.
+    
     """
+    target_path = os.path.join(in_path, target)
+    if not os.path.exists(target_path):
+        return False
+    dataset_path = os.path.join(target_path, "dataset.parquet")
+    if not os.path.exists(dataset_path):
+        return False
+    features_path = os.path.join(target_path, "features.json")
+    if not os.path.exists(features_path):
+        return False
 
-    def __init__(self, ref=None, data=None, ref_file=None, database_file=None, nan_equivalents={}, section_keys={}):
-        if (ref is None) and (ref_file is None):
-            ValueError("ref or ref_file must be provided")
-        if (data is None) and (database_file is None):
-            ValueError("data or database_file must be provided")
-        self.data = data
-        self.ref = ref
-        self.database_file = database_file
-        self.ref_file = ref_file
-        self.nan_equivalents = nan_equivalents
-        self.section_keys = section_keys
-        self.X = None
-        self.y = None
+    return True
 
-    def load_data(self, verbosity: int = 0):
-        setup_logger(verbosity)
-        """Loads the reference and database data."""
-        if self.data is None:
-            data_logger.info("Loading Perovskite Data.")
-            if not os.path.isabs(self.database_file):
-                self.database_file = os.path.join(DATA_DIR, self.database_file)
-            self.data = pd.read_csv(self.database_file, low_memory=False)
-            self.data.replace(self.nan_equivalents, inplace=True)
 
-        if self.ref is None:
-            data_logger.info("Loading Reference Data.")
-            if not os.path.isabs(self.ref_file):
-                self.ref_file = os.path.join(DATA_DIR, self.ref_file)
-            self.ref = pd.read_excel(self.ref_file, sheet_name=None)
+def save_dataset(data, features: dict, target: str, out_path=EXPAND_DIR):
+    """Saves the data and metadata for a given target feature.
 
-        data_logger.info("Data Loaded.")
+    See the `README.md` in `./data` for more information about the file structure.
+    
+    Args:
+        data (dataframe): The data.
+        features (dict): The features.
+        target (str): Name of the target feature.
+        out_path (str, optional): Path to the directory to save the dataset.
+            Defaults to EXPAND_DIR.
+            
+    Returns:
+        None
+    
+    """
+    target_path = os.path.join(out_path, target)
+    if not os.path.exists(out_path):
+        os.mkdir(out_path)
+    if not os.path.exists(target_path):
+        os.mkdir(target_path)
 
-    def get_Xy(self, data, target):
-        """Returns a masked version of the data and target series.
+    dataset_path = os.path.join(target_path, "dataset.parquet")
+    table = pa.Table.from_pandas(data)
+    metadata = table.schema.metadata or {}
+    metadata.update({"target": target})
+    pq.write_table(table, dataset_path)
 
-        Masks data against the target series excluding NaN target values.
+    features_path = os.path.join(target_path, "features.json")
+    with open(features_path, "w") as file:
+        json.dump(features, file, indent=4)
+
+
+def load_dataset(target: str, in_path=EXPAND_DIR):
+    """Loads the data and metadata for a given target feature.
+    
+    Args:
+        target (str): Name of the target feature.
+        in_path (str, optional): Path to the directory to load the dataset.
+            Defaults to EXPAND_DIR.
+
+    Returns:
+        dataframe: The data.
+        dict: The features.
+    
+    """
+    target_path = os.path.join(in_path, target)
+    dataset_path = os.path.join(target_path, "dataset.parquet")
+    features_path = os.path.join(target_path, "features.json")
+    table = pq.read_table(dataset_path)
+    data = table.to_pandas()
+    with open(features_path, "r") as file:
+        features = json.load(file)
+    return data, features
+
+
+def has_reference(path=EXPAND_DIR):
+    """Checks if the database reference exists.
+    
+    Args:
+        path (str, optional): Path to the directory containing the reference.
+            Defaults to EXPAND_DIR.
+
+    Returns:
+        bool: True if the reference exists. False otherwise.
+    
+    """
+    reference_path = os.path.join(path, "reference.json")
+    if not os.path.exists(reference_path):
+        return False
+    return True
+
+
+def save_reference(ref, out_path=EXPAND_DIR):
+    """Saves a database reference.
+    
+    See the `README.md` in `./data` for more information about the file structure.
+    
+    Args:
+        ref (dict): The reference.
+        out_path (str, optional): Path to the directory to save the reference.
+            Defaults to EXPAND_DIR.
+
+    Returns:
+        None
+    
+    """
+    if not os.path.exists(out_path):
+        os.mkdir(out_path)
+    reference_path = os.path.join(out_path, "reference.json")
+    with open(reference_path, "w") as file:
+        json.dump(ref, file, indent=4)
+
+
+def load_reference(in_path=EXPAND_DIR):
+    """Loads the database reference.
+    
+    Args:
+        in_path (str, optional): Path to the directory to load the reference.
+            Defaults to EXPAND_DIR.
+
+    Returns:
+        dict: The reference.
+    
+    """
+    reference_path = os.path.join(in_path, "reference.json")
+    with open(reference_path, "r") as file:
+        ref = json.load(file)
+    return ref
+
+
+def generate_reference(refs):
+    """Generates a database reference.
+    
+    Args:
+        refs (dataframe): An expanded representation of the database reference.
+
+    Returns:
+        dict: The reference.
+    
+    """
+    return {
+        ref: refs[ref]['Field'].to_list()
+        for ref in refs if ref != 'Full Table'
+    }
+
+
+def generate_dataset(target, database=DATABASE, save=True):
+    """Generates an expanded dataset for a given target feature.
+    
+    Args:
+        target (str): Name of the target feature.
+        database (PerovskiteDatabase, optional): An instance of the Perovskite Dataset.
+            Defaults to DATABASE.
+        save (bool, optional): Whether to save the dataset.
+            Defaults to True.
+
+    Returns:
+        dataframe: The data.
+        dict: The data features.
+        dict: The database reference.
+    
+    """
+    database.load_data()
+    x, _ = database.get_Xy(database.data, target)
+    if has_reference():
+        ref = load_reference()
+    else:
+        ref = generate_reference(database.ref)
+    data, features = expand_sort(x, database.ref['Full Table'])
+    data = data.apply(_to_numeric)
+    if save:
+        save_reference(ref)
+        save_dataset(data, features, target)
+    return data, features, ref
+
+def generate_groups(target, group, database=DATABASE):
+    """Generates a list of groups for a given target feature and group feature.
+    
+    Args:
+        target (str): Name of the target feature.
+        group (str): Name of the feature to group by.
+        
+    Return:
+        list: The list of groups.
+    
+    """
+    database.load_data()
+    x, _ = database.get_Xy(database.data, target)
+    return x[group].astype(str).to_list()
+    
+
+class DataSet():
+    """Stores the expanded perovskite data and metadata for a given target feature.
+    
+    Attributes:
+        target (str): Name of the target feature.
+        data (dataframe): The expanded data.
+        reference (dict): The database reference.
+        all_features (dict): The full set of features for the expanded data.
+        features (dict): A reduced set of features generated during preprocessing.
+        groups (list): A list of groups for the target feature.
+    
+    """
+    def __init__(self, target, group_by=None):
+        self.target = target
+        self.data = None
+        self.reference = None
+        self.all_features = None
+        self.features = None
+        if group_by is not None:
+            self.groups = generate_groups(target, group_by)
+        else:
+            self.groups = group_by
+
+    def reset_features(self):
+        """Resets the reduced set of features to the full set of features.
+        
+        Returns:
+            None
+        
+        """
+        self.features = self.all_features
+        return
+
+    def collect_features(self):
+        """Collects the features from the reduced set of features.
+        
+        Returns:
+            list: The list of features.
+        
+        """
+        return collect_features(self.features)
+
+    def get_dataset(self, database=DATABASE, save: bool = True):
+        """Loads the data and metadata for a given target feature.
+        
+        Stores the data and metadata in the class attributes.
 
         Args:
-            data (dataframe): The perovskite data.
-            target (str): The name of the target feature.
+            database (PerovskiteDatabase, optional): An instance of the Perovskite Dataset.
+                Defaults to DATABASE.
+            save (bool, optional): Whether to save the dataset.
+                Defaults to True.
 
         Returns:
-            dataframe: The masked data.
-            series: The masked target.
-
-        """
-        # Mask data against target. Target values cannot be NaN
-        mask = self.data[target].notna()
-        X = data[mask]
-        y = self.data[mask][target]
-        return X, y
-
-    def set_Xy(self, data, target):
-        """Calls `getXy(data, target)` and stores the output."""
-        X, y = self.get_Xy(data, target)
-        self.X = X
-        self.y = y
-        return X, y
-
-    def preprocess(self, target, threshold, depth, exclude_sections=[], exclude_cols=[], save: bool = True, verbosity: int = 0):
-        """Generates a preprocessed version of the dataset.
+            None
         
-        If an unseen set of hyperparameters is used to generate the preprocessed dataset, it is saved for future use. Otherwise, the previously generated file is loaded and returned instead.
+        """
+        if has_dataset(self.target):
+            self.data, self.all_features, = load_dataset(self.target)
+            self.reference = load_reference()
+            self.reset_features()
+            return
+
+        self.data, self.all_features, self.reference = generate_dataset(
+            self.target, database=database, save=save)
+        self.reset_features()
+        return
+
+    def remove_features(self, features):
+        """Removes features from the reduced set of features.
         
         Args:
-            target (str): Name of the target feature
-            threshold (float): Threshold (%) for the feature density.
-                Used to remove sparce data.
-            depth (float): Threshold (%) for the feature layer density.
-                Determines how many feature layers are extracted.
-            exclude_sections (list of str, optional): List of sections to be excluded.
+            features (list): The list of features to remove.
+
+        Returns:
+            None
+        
+        """
+        self.features = remove_features(self.features, features)
+        return
+
+    def remove_sections(self, sections):
+        """Removes an entire section of features from the reduced set of features.
+        
+        Args:
+            sections (list): The list of sections to remove.
+
+        Returns:
+            None
+        
+        """
+        self.features = remove_features(
+            self.features,
+            section_features(sections, self.reference)
+        )
+        return
+
+    def remove(self, sections=[], features=[]):
+        """Removes both sections and features from the reduced set of features.
+
+        Args:
+            sections (list): The list of sections to remove.
                 Defaults to [].
-            exclude_cols (list of str, optional): List of columns to be excluded.
+            features (list): The list of features to remove.
                 Defaults to [].
-            save (bool, optional): Whether to save the preprocessed data.
-                Defaults to True.
-            verbosity (int, optional): Verbosity level.
-                Defaults to 0.
+
+        Returns:
+            None
+
+        """
+        remove_list = section_features(sections, self.reference)
+        remove_list.extend(features)
+        self.remove_features(remove_list)
+        return
+
+    def prune_by_sparsity(self, threshold):
+        """Prunes the reduced set of features by sparsity.
+        
+        Args:
+            threshold (float): The sparsity threshold.
+
+        Returns:
+            None
+        
+        """
+        self.features = prune_by_sparsity(self.features, threshold)
+        return
+
+    def get_Xy(self):
+        """Returns the reduced data and the target series.
+
+        Returns:
+            dataframe: The reduced data.
+            series: The target series.
+        
+        """
+        feature_list = self.collect_features()
+        return self.data[feature_list], self.data[self.target]
+
+    def preprocess(self, threshold=None, exclude_sections=[], exclude_cols=[]):
+        """Preprocesses the data.
+        
+        If an unseen target is used to generate the preprocessed dataset, it is saved for future use. Otherwise, the previously generated file is loaded and returned instead.
+        
+        Args:
+            threshold (float, optional): The sparsity threshold.
+                Defaults to None.
+            exclude_sections (list, optional): The list of sections to exclude.
+                Defaults to [].
+            exclude_cols (list, optional): The list of columns to exclude.
+                Defaults to [].
 
         Returns:
             dataframe: The preprocessed data.
-            series: The target data.
+            series: The target series.
 
         """
-        self.load_data(verbosity=verbosity)
-
-        params = {
-            'target': target,
-            'threshold': threshold,
-            'depth': depth,
-            'exclude_sections': exclude_sections,
-            'exclude_cols': exclude_cols,
-        }
-
-        # Generate file name from parameters
-        file_hash = hash_params(params)
-        file_name = f'expanded_data_d{depth}_t{threshold}_{file_hash}.parquet'
-        folder_path = os.path.join(DATA_DIR, 'preprocessed')
-        file_path = os.path.join(folder_path, file_name)
-
-        if not os.path.exists(folder_path):
-            os.mkdir(folder_path)
-        elif os.path.exists(file_path):
-            # Check if file exists
-            data_logger.info("File already exists.")
-            data_logger.debug(f"Found at: {file_path}")
-            table = pq.read_table(file_path)
-            data_logger.info("Preprocessed data Loaded.")
-            return self.set_Xy(table.to_pandas(), target)
-
-        # Remove excluded keys
-        sections = copy.copy(self.section_keys)
-        for key in exclude_sections:
-            del sections[key]
-
-        data_logger.info("File does not exist.")
-
-        data = preprocess_data(
-            self.data,
-            self.ref,
-            threshold,
-            depth,
-            sections=sections,
-            exclude_cols=exclude_cols,
-            nan_equivalents=self.nan_equivalents,
-            verbosity=verbosity
-        )
-
-        # Save Data
-        if save:
-            data_logger.info("Saving Data.")
-            data_logger.debug(f"Saving to: {file_path}")
-            table = pa.Table.from_pandas(data)
-            metadata = table.schema.metadata or {}
-            metadata.update({key.encode(): str(value).encode()
-                            for key, value in params.items()})
-            pq.write_table(table.replace_schema_metadata(metadata), file_path)
-            data_logger.info("Data Saved.")
-
-        return self.set_Xy(data, target)
+        self.get_dataset()
+        ##-- TODO: Add selective preprocessing step here --##
+        self.remove(sections=exclude_sections, features=exclude_cols)
+        if threshold is not None:
+            self.prune_by_sparsity(threshold)
+        return self.get_Xy()

@@ -41,8 +41,8 @@ data, selector = preprocess_data(
 )
 
 # Process target data
-mask = DATASET.data[TARGET_COL].notna()
-target_data = DATASET.data[mask][TARGET_COL]
+mask = DATABASE.data[TARGET_COL].notna()
+target_data = DATABASE.data[mask][TARGET_COL]
 
 ci_percent = 1/3
 params = stats.skewnorm.fit(target_data)

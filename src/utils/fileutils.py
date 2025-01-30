@@ -22,4 +22,8 @@ def hash_params(params: dict):
     return hashlib.md5(param_str.encode()).hexdigest()
 
 PROJECT_DIR =  _updir(__file__, 3)
+"""Project root directory."""
 DATA_DIR = os.path.join(PROJECT_DIR, 'data')
+"""Data directory"""
+EXPAND_DIR = os.path.join(DATA_DIR, 'expanded')
+"""Expanded data directory"""
