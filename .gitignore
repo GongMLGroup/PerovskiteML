@@ -29,3 +29,8 @@ preprocessed/
 
 # Neptune files
 *.neptune
+
+# Build files
+_build/
+_static/
+_autosummary/
