@@ -6,8 +6,21 @@ readme = "README.md"
 authors = [
     { name = "Violet Hart", email = "vihart.rl@gmail.com" }
 ]
-requires-python = ">=3.12.0"
-dependencies = []
+requires-python = "==3.12.0"
+dependencies = [
+    "bigtree>=0.24.0",
+    "ipykernel>=6.29.5",
+    "matplotlib>=3.10.0",
+    "neptune[xgboost]>=1.13.0",
+    "openpyxl>=3.1.5",
+    "optuna>=4.2.0",
+    "pandas>=2.2.3",
+    "pyarrow>=19.0.0",
+    "python-dotenv>=1.0.1",
+    "scikit-learn>=1.6.1",
+    "shap>=0.46.0",
+    "xgboost>=2.1.4",
+]
 
 [build-system]
 requires = ["hatchling"]

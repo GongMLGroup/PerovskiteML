@@ -14,7 +14,7 @@ from sklearn.model_selection import cross_validate
 import scipy.stats as stats
 
 # import custom scripts
-from utils import *
+from perovskiteml import *
 
 # Threshold (%) of data for a feature to be included
 THRESHOLD = 0.75

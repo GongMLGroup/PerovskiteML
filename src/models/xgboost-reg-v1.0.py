@@ -17,7 +17,7 @@ from neptune.utils import stringify_unsupported
 import matplotlib.pyplot as plt
 
 # import custom scripts
-from scripts import NEPTUNE_PROJECT, NEPTUNE_API_TOKEN, DATABASE
+from perovskiteml import NEPTUNE_PROJECT, NEPTUNE_API_TOKEN, DATABASE
 
 ###--- Initialization of the Model run ---###
 # Initialize the neptune run with the project name and api token
