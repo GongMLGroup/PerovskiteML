@@ -1,0 +1,14 @@
+[project]
+name = "perovskiteml"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Violet Hart", email = "vihart.rl@gmail.com" }
+]
+requires-python = ">=3.12.0"
+dependencies = []
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
