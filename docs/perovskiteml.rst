@@ -1,7 +1,7 @@
-utils
-=====
+perovskiteml
+============
 
-.. automodule:: utils
+.. automodule:: perovskiteml
 
    
    .. rubric:: Functions

@@ -12,4 +12,4 @@ Add description of project.
    :caption: Reference:
    :maxdepth: 2
    
-   utils
+   perovskiteml
