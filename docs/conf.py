@@ -8,8 +8,8 @@ import os
 import shutil
 from pathlib import Path
 
-print(os.path.abspath('../src/perovskiteml'))
-sys.path.insert(0, str(Path('..', 'src').resolve()))
+print(os.path.abspath('../perovskiteml'))
+sys.path.insert(0, os.path.abspath(".."))
 
 # make copy of notebooks in docs folder, as they must be here for sphinx to
 # pick them up properly.
@@ -19,7 +19,7 @@ if os.path.exists(NOTEBOOKS_DIR):
 
     warnings.warn("notebooks directory exists, replacing...")
     shutil.rmtree(NOTEBOOKS_DIR)
-shutil.copytree(os.path.abspath("../src/notebooks"), NOTEBOOKS_DIR)
+shutil.copytree(os.path.abspath("../notebooks"), NOTEBOOKS_DIR)
 if os.path.exists(NOTEBOOKS_DIR + "/local_scratch"):
     shutil.rmtree(NOTEBOOKS_DIR + "/local_scratch")
 
