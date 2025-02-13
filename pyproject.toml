@@ -28,7 +28,8 @@ build-backend = "hatchling.build"
 
 [dependency-groups]
 dev = [
-    "nbsphinx>=0.9.6",
+    "esbonio>=0.16.5",
+    "myst-nb>=1.2.0",
     "perovskiteml",
     "sphinx>=8.1.3",
     "sphinx-rtd-theme>=3.0.2",

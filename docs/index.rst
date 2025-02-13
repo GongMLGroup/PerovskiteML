@@ -13,3 +13,12 @@ Add description of project.
    :maxdepth: 2
    
    perovskiteml
+
+Notebooks
+=========
+
+.. toctree::
+   :maxdepth: 2
+
+   notebooks/xgboost-reg-v2.0
+   notebooks/range_data_fix

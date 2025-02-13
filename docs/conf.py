@@ -4,9 +4,24 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
 import sys
+import os
+import shutil
 from pathlib import Path
 
+print(os.path.abspath('../src/perovskiteml'))
 sys.path.insert(0, str(Path('..', 'src').resolve()))
+
+# make copy of notebooks in docs folder, as they must be here for sphinx to
+# pick them up properly.
+NOTEBOOKS_DIR = os.path.abspath("notebooks")
+if os.path.exists(NOTEBOOKS_DIR):
+    import warnings
+
+    warnings.warn("notebooks directory exists, replacing...")
+    shutil.rmtree(NOTEBOOKS_DIR)
+shutil.copytree(os.path.abspath("../src/notebooks"), NOTEBOOKS_DIR)
+if os.path.exists(NOTEBOOKS_DIR + "/local_scratch"):
+    shutil.rmtree(NOTEBOOKS_DIR + "/local_scratch")
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
@@ -19,6 +34,8 @@ author = 'Violet Hart'
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = [
+    'myst_nb',
+    'sphinx.ext.mathjax',
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
     'sphinx.ext.autosectionlabel',
@@ -39,6 +56,8 @@ autosummary_generate = True
 templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
+# [myst-nb]
+nb_execution_mode = 'auto'
 
 
 # -- Options for HTML output -------------------------------------------------
