@@ -5,25 +5,45 @@ Add a file named `.env` to the root of the project.
 ```
 📦PerovskiteML
  ┣ 📂data
+ ┣ 📂docs
  ┣ 📂figures
+ ┣ 📂julia
+ ┣ 📂models
  ┣ 📂notebooks
- ┣ 📂src
+ ┣ 📂perovskiteml
  ┣ 📜.env ⭐
  ┣ 📜.gitignore
- ┣ 📜Project.toml
- ┣ 📜pyrequirements.txt
- ┗ 📜README.md
+ ┣ 📜README.md
+ ┣ 📜pyproject.toml
+ ┗ 📜uv.lock
  ```
  Inside the `.env` file add important information.
- ```
+ ```js
 # Neptune Information
 NEPTUNE_PROJECT = "workspace/project-name"
 NEPTUNE_API_TOKEN = "YOUR_API_TOKEN"
  ```
 
-## Update your Virtual Environment
-To make sure your packages are up to date make sure to update your virtual environment when syncing with new changes.
+## Installation
+Once you clone the repository you can use [uv](https://docs.astral.sh/uv/), a python package and project manager to install the project.
 ```bash
-./.venv/Scripts/activate
-pip install -r pyrequirements.txt
+winget install --id=astral-sh.uv  -e
 ```
+More installation methods can be found [here](https://docs.astral.sh/uv/getting-started/installation/).
+
+Navigate to your clone of the PerovskiteML Project and install it with the following command:
+```bash
+uv sync
+```
+This should install the dependencies to a virtual environment named `.venv`. VSCode will automatically detect and activate this envornment for you. 
+
+## Update your Virtual Environment
+Whenever there are updates to the project you can use:
+```bash
+git pull
+```
+To download and update the project files. And:
+```bash
+uv sync
+```
+To update the dependencies and virtual environment.
