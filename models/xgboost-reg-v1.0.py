@@ -7,7 +7,7 @@ from io import StringIO
 
 from sklearn.preprocessing import OrdinalEncoder
 from sklearn.compose import ColumnTransformer, make_column_selector
-from sklearn.model_selection import GroupKFold
+from sklearn.model_selection import train_test_split
 
 import neptune
 from neptune.integrations.xgboost import NeptuneCallback
@@ -17,14 +17,14 @@ from neptune.utils import stringify_unsupported
 import matplotlib.pyplot as plt
 
 # import custom scripts
-from scripts import NEPTUNE_PROJECT, NEPTUNE_API_TOKEN, DataSet
+from perovskiteml import NEPTUNE_PROJECT, NEPTUNE_API_TOKEN, DATABASE
 
 ###--- Initialization of the Model run ---###
 # Initialize the neptune run with the project name and api token
 run = neptune.init_run(
     project=NEPTUNE_PROJECT,
     api_token=NEPTUNE_API_TOKEN,
-    tags=["xgboost", "shap", "v2.0"],
+    tags=["xgboost", "shap", "v1.0"],
 )
 # Create the neptune callback function to log our run
 neptune_callback = NeptuneCallback(
@@ -39,19 +39,20 @@ run['seed'] = seed # logs the seed in neptune
 
 # Preprocessor and model parameters.
 parameters = {
-    'dataset': {
-        'target': "JV_default_PCE",
-        'group_by': "Cell_stack_sequence"
-    },
     'preprocessor': {
-        'threshold': 0.25,
+        'target': "JV_default_PCE",
+        'threshold': 0.75,
+        'depth': 0.75,
         'exclude_sections': [
             "Reference information",
             "Cell definition",
             "Outdoor testing",
-            "JV data",
+            "JV data"
         ],
-        'exclude_cols': []
+        'exclude_cols': [
+            "Outdoor_time_start",
+            "Outdoor_time_end"
+        ]
     },
     'model': {
         'objective': "reg:squarederror",
@@ -68,11 +69,8 @@ early_stopping_rounds = None # Number of rounds to check for improvements before
 
 ###--- Initialize the Preprocessor ---###
 
-# Load the DataSet
-dataset = DataSet(**parameters['dataset'])
-
 # Generate preprocessed data
-X, y = dataset.preprocess(**parameters['preprocessor'])
+X, y = DATABASE.preprocess(**parameters['preprocessor'], verbosity=2)
 
 # Define the preprocessor
 encoder = OrdinalEncoder(
@@ -99,11 +97,9 @@ all_columns = list(X.select_dtypes(np.number).columns) + list(X.select_dtypes([b
 X_transformed = pd.DataFrame(preprocessor.fit_transform(X, y)) # Transform data
 X_transformed.columns = all_columns # Replace column names
 
-# Create the training and testing split of data
-gkf = GroupKFold(n_splits=2)
-train, test = next(gkf.split(X_transformed, y, groups=dataset.groups))
-X_train, X_test = X_transformed.loc[train], X_transformed.loc[test]
-y_train, y_test = y[train], y[test]
+X_train, X_test, y_train, y_test = train_test_split(
+    X_transformed, y, test_size=0.30, random_state=seed
+) # Create the training and testing split of data
 
 ###--- Define the Model ---###
 # https://xgboost.readthedocs.io/en/stable/python/python_intro.html

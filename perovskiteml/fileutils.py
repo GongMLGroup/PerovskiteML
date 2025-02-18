@@ -21,7 +21,7 @@ def hash_params(params: dict):
                          value in sorted(params.items()))
     return hashlib.md5(param_str.encode()).hexdigest()
 
-PROJECT_DIR =  _updir(__file__, 3)
+PROJECT_DIR =  _updir(__file__, 2)
 """Project root directory."""
 DATA_DIR = os.path.join(PROJECT_DIR, 'data')
 """Data directory"""
