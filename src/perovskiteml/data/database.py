@@ -5,9 +5,8 @@ import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from ..utils.fileutils import PROJECT_DIR, DATA_DIR, hash_params
-from ..preprocess import preprocess_data
-from ..utils.logger import data_logger, setup_logger
+from ..preprocessing.preprocess import preprocess_data
+from ..utils import DATA_DIR, CLEAN_DIR, hash_params, setup_logger, data_logger
 
 
 class PerovskiteData():
@@ -59,14 +58,14 @@ class PerovskiteData():
         if self.data is None:
             data_logger.info("Loading Perovskite Data.")
             if not os.path.isabs(self.database_file):
-                self.database_file = os.path.join(DATA_DIR, self.database_file)
+                self.database_file = os.path.join(CLEAN_DIR, self.database_file)
             self.data = pd.read_csv(self.database_file, low_memory=False)
             self.data.replace(self.nan_equivalents, inplace=True)
 
         if self.ref is None:
             data_logger.info("Loading Reference Data.")
             if not os.path.isabs(self.ref_file):
-                self.ref_file = os.path.join(DATA_DIR, self.ref_file)
+                self.ref_file = os.path.join(CLEAN_DIR, self.ref_file)
             self.ref = pd.read_excel(self.ref_file, sheet_name=None)
 
         data_logger.info("Data Loaded.")
@@ -100,9 +99,9 @@ class PerovskiteData():
 
     def preprocess(self, target, threshold, depth, exclude_sections=[], exclude_cols=[], save: bool = True, verbosity: int = 0):
         """Generates a preprocessed version of the dataset.
-        
+
         If an unseen set of hyperparameters is used to generate the preprocessed dataset, it is saved for future use. Otherwise, the previously generated file is loaded and returned instead.
-        
+
         Args:
             target (str): Name of the target feature
             threshold (float): Threshold (%) for the feature density.
@@ -179,15 +178,15 @@ class PerovskiteData():
             data_logger.info("Data Saved.")
 
         return self.set_Xy(data, target)
-    
 
-with open(os.path.join(PROJECT_DIR,"data/section_keys.json"), "r") as file:
+
+with open(os.path.join(CLEAN_DIR, "section_keys.json"), "r") as file:
     SECTION_KEYS = json.load(file)
     """dict: Dictionary of section names and their corresponding shorthand.
 
     The shorhand is used as a prefix for feature names.
     """
-with open(os.path.join(PROJECT_DIR,"data/nan_equivalents.json"), "r") as file:
+with open(os.path.join(CLEAN_DIR, "nan_equivalents.json"), "r") as file:
     NAN_EQUIVALENTS = json.load(file)
     """dict: Keys are equivalent to `missing` or `nan` values in the dataset."""
 

@@ -25,5 +25,7 @@ PROJECT_DIR =  _updir(__file__, 2)
 """Project root directory."""
 DATA_DIR = os.path.join(PROJECT_DIR, 'data')
 """Data directory"""
+CLEAN_DIR = os.path.join(DATA_DIR, 'clean')
+"""Cleaned data directory"""
 EXPAND_DIR = os.path.join(DATA_DIR, 'expanded')
 """Expanded data directory"""
