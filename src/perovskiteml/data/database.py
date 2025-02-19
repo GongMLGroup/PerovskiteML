@@ -5,9 +5,9 @@ import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from .fileutils import PROJECT_DIR, DATA_DIR, hash_params
-from .preprocess import preprocess_data
-from .logger import data_logger, setup_logger
+from ..utils.fileutils import PROJECT_DIR, DATA_DIR, hash_params
+from ..preprocess import preprocess_data
+from ..utils.logger import data_logger, setup_logger
 
 
 class PerovskiteData():

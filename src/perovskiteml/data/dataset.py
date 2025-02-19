@@ -4,10 +4,10 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 
 from .database import DATABASE
-from .fileutils import EXPAND_DIR
-from .reduction import prune_by_sparsity, collect_features, remove_features, section_features
-from .expansion import expand_sort
-from .preprocess import _to_numeric
+from ..utils.fileutils import EXPAND_DIR
+from ..reduction import prune_by_sparsity, collect_features, remove_features, section_features
+from ..expansion import expand_sort
+from ..preprocess import _to_numeric
 
 
 def has_dataset(target, in_path=EXPAND_DIR):
