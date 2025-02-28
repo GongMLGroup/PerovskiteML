@@ -14,6 +14,11 @@ from .reduction import (
     prune_by_sparsity,
 )
 
+from .pruner import (
+    PrunerConfig,
+    PrunerFactory
+)
+
 __all__ = [
     # Expansion
     "expand_data",
@@ -27,5 +32,9 @@ __all__ = [
     # Reduction
     "find_sparsity",
     "prune_by_sparsity",
+    
+    # Pruning
+    "PrunerConfig",
+    "PrunerFactory",
     
 ]
