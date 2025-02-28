@@ -1,0 +1,14 @@
+[expansion]
+cache_dir = "data/expanded"
+force_reprocess = false
+
+[pruner]
+method = "breadth_pruner"  # or "depth_pruner"
+sparsity_threshold = 0.25  # Prune features missing more than 25% of data
+
+[pruner.remove]
+sections = []
+features = []
+
+[pruner.params.depth_pruner]
+device_layer_coverage = 0.95  # Cover 95% of devices' layers
