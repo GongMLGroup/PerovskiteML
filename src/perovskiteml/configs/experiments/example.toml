@@ -1,14 +1,66 @@
+[experiment]
+name = "example_experiment"
+seed = 42
+neptune = true              # Log to neptune
+verbose = 1
+# 0: Silent, only critical errors
+# 1: Warnings and above
+# 2: Info and above
+# 3: Debug and above
+
+
 [expansion]
 cache_dir = "data/expanded"
 force_reprocess = false
 
-[pruner]
-method = "breadth_pruner"  # or "depth_pruner"
-sparsity_threshold = 0.25  # Prune features missing more than 25% of data
 
-[pruner.remove]
-sections = []
-features = []
+[pruning]
+method = "chain_pruner"
 
-[pruner.params.depth_pruner]
-device_layer_coverage = 0.95  # Cover 95% of devices' layers
+[[pruning.steps]]
+method = "feature_pruner"
+sections = [
+    "Reference information",
+    "Cell definition",
+    "Outdoor testing",
+    "JV data",
+]
+features = ["Outdoor_time_start", "Outdoor_time_end"]
+
+[[pruning.steps]]
+method = "breadth_pruner" # or "depth_pruner"
+sparsity_threshold = 0.25 # Prune features missing more than 25% of data
+
+[[pruning.steps]]
+method = "depth_pruner"
+layer_coverage = 0.75   # Minimum layers that contain 95% of devices
+
+
+[model]
+name = "xgboost"
+eta = 0.3        # learning rate
+max_depth = 6
+
+
+[hyperparameters]
+n_trials = 200
+direction = "maximize"
+study_name = "example_opt"
+
+[hyperparameters.model]
+eta = { type = "float", low = 1e-4, high = 0.1, log = true }
+max_depth = { type = "int", low = 3, high = 10 }
+
+[[hyperparameters.pruning]]
+method = "breadth_pruner"
+sparsity_threshold = { type = "float", low = 0, high = 1 }
+
+[[hyperparameters.pruning]]
+method = "depth_pruner"
+layer_coverage = { type = "float", low = 0, high = 1 }
+
+
+[logging]
+project = "gongjiawei105/PVSK-ML"
+api_token = "${NEPTUNE_API_TOKEN}"
+tags = ["example", "xgboost"]

@@ -15,7 +15,6 @@ from .reduction import (
 )
 
 from .pruner import (
-    PrunerConfig,
     PrunerFactory
 )
 

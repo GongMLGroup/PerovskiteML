@@ -1,88 +1,169 @@
 from abc import ABC, abstractmethod
 from pydantic import BaseModel, Field, model_validator
-from typing import Literal, Annotated
+from typing import Literal, Annotated, Union
 from .reduction import prune_and_combine
 # from ..data import DataSet
 
 
-class BasePrunerConfig(BaseModel):
-    method: Literal["breadth_pruner", "depth_pruner"]
-    sparsity_threshold: Annotated[float, Field(ge=0.0, le=1.0)] = 0.25
-    remove: dict[str, list] = Field(default_factory=dict)
-    params: dict = Field(default_factory=dict)
+# --------------------------
+# Base Model Definition
+# --------------------------
 
 
-class DepthParams(BaseModel):
-    device_layer_coverage: Annotated[float, Field(ge=0.0, le=1.0)] = 0.75
-
-
-class PrunerConfig(BasePrunerConfig):
-    @model_validator(mode="after")
-    def validate_method_params(self):
-        method = self.method
-        parameters = self.params.get(method, {})
-
-        match method:
-            case "breadth_pruner":
-                self.params = parameters
-            case "depth_pruner":
-                self.params = DepthParams(**parameters)
-            case _:
-                raise ValueError(f"Invalid method: {method}")
-
-        return self
-
-
-class PrunerFactory:
-    _registry = {}
-
-    @classmethod
-    def register(cls, name: str):
-        def decorator(pruner_class):
-            cls._registry[name] = pruner_class
-            return pruner_class
-        return decorator
-
-    @classmethod
-    def create(cls, config: BasePrunerConfig):
-        return cls._registry[config.method](config)
+class BasePrunerConfig(BaseModel, ABC):
+    """Base configuration for all pruners"""
+    method: str
 
 
 class BasePruner(ABC):
-    def __init__(self, config: PrunerConfig):
+    def __init__(self, config: BasePrunerConfig):
         self.config = config
 
     @abstractmethod
     def prune(self, dataset):
+        """Prune input data according to config"""
         pass
-    
 
-@PrunerFactory.register("breadth_pruner")
-class BreadthPruner(BasePruner):
-    # TODO: add functionality
+
+class PrunerFactory:
+    _pruners = {}
+    _configs = {}
+
+    @classmethod
+    def register_pruner(cls, name: str):
+        def decorator(pruner_cls):
+            cls._pruners[name] = pruner_cls
+            return pruner_cls
+        return decorator
+
+    @classmethod
+    def register_config(cls, name: str):
+        def decorator(config_cls):
+            cls._configs[name] = config_cls
+            return config_cls
+        return decorator
+
+    @classmethod
+    def create(cls, config: Union[dict, BasePrunerConfig]) -> BasePruner:
+        """Create pruner from validated configuration"""
+        if isinstance(config, dict):
+            config = cls._validate_dict_config(config)
+
+        if config.method not in cls._pruners:
+            raise ValueError(f"Unknown pruner type: {config.method}")
+
+        return cls._pruners[config.method](config)
+
+    @classmethod
+    def _validate_dict_config(cls, config: dict) -> BasePrunerConfig:
+        """Convert and validate dict config to appropriate model"""
+        method = config.get("method")
+
+        if method not in cls._configs:
+            raise ValueError(f"Invalid pruner method: {method}")
+
+        return cls._configs[method](**config)
+
+
+# --------------------------
+# Configuration Models
+# --------------------------
+
+
+@PrunerFactory.register_config("feature_pruner")
+class FeaturePrunerConfig(BasePrunerConfig):
+    method: Literal["feature_pruner"] = "feature_pruner"
+    sections: list[str] = Field(default_factory=list)
+    features: list[str] = Field(default_factory=list)
+
+
+@PrunerFactory.register_config("breadth_pruner")
+class BreadthPrunerConfig(BasePrunerConfig):
+    method: Literal["breadth_pruner"] = "breadth_pruner"
+    sparsity_threshold: Annotated[float, Field(ge=0.0, le=1.0)] = 0.25
+
+
+@PrunerFactory.register_config("depth_pruner")
+class DepthPrunerConfig(BasePrunerConfig):
+    method: Literal["depth_pruner"] = "depth_pruner"
+    layer_coverage: Annotated[float, Field(ge=0.0, le=1.0)] = 0.75
+
+
+@PrunerFactory.register_config("chain_pruner")
+class ChainPrunerConfig(BasePrunerConfig):
+    method: Literal["chain_pruner"] = "chain_pruner"
+    steps: list[Union[
+        FeaturePrunerConfig,
+        BreadthPrunerConfig,
+        DepthPrunerConfig
+    ]] = Field(
+        ...,
+        min_items=1,
+        description="Ordered list of pruning steps"
+    )
+
+# --------------------------
+# Pruner Implementation
+# --------------------------
+
+
+@PrunerFactory.register_pruner("feature_pruner")
+class FeaturePruner(BasePruner):
+    def __init__(self, config: FeaturePrunerConfig):
+        super().__init__(config)
+
     def prune(self, dataset):
         if not dataset.features:
             dataset.get_dataset()
-        if self.config.remove:
-            dataset.remove(
-                sections=self.config.remove.get("sections", []),
-                features=self.config.remove.get("features", [])
-            )
+        print(f"Pruning sections: {self.config.sections}")
+        print(f"Pruning features: {self.config.features}")
+        dataset.remove(
+            sections=self.config.sections,
+            features=self.config.features
+        )
+        # Implement actual pruning logic
+        return dataset
+
+
+@PrunerFactory.register_pruner("breadth_pruner")
+class BreadthPruner(BasePruner):
+    def __init__(self, config: BreadthPrunerConfig):
+        super().__init__(config)
+    
+    def prune(self, dataset):
+        if not dataset.features:
+            dataset.get_dataset()
+            
         if self.config.sparsity_threshold > 0.0:
             dataset.prune_by_sparsity(self.config.sparsity_threshold)
         return dataset
 
 
-@PrunerFactory.register("depth_pruner")
+@PrunerFactory.register_pruner("depth_pruner")
 class DepthPruner(BasePruner):
-    # TODO: add functionality
+    def __init__(self, config: DepthPrunerConfig):
+        super().__init__(config)
+
     def prune(self, dataset):
-        if self.config.params.device_layer_coverage < 1.0:
+        if self.config.layer_coverage < 1.0:
             if not dataset.features:
                 dataset.get_dataset()
             dataset.features = prune_and_combine(
                 dataset.features,
-                self.config.params.device_layer_coverage
+                self.config.layer_coverage
             )
-            
+
+        return dataset
+    
+    
+@PrunerFactory.register_pruner("chain_pruner")
+class ChainPruner(BasePruner):
+    def __init__(self, config: ChainPrunerConfig):
+        super().__init__(config)
+        self.pruners = [PrunerFactory.create(
+            step) for step in self.config.steps]
+
+    def prune(self, dataset):
+        for pruner in self.pruners:
+            dataset = pruner.prune(dataset)
         return dataset
