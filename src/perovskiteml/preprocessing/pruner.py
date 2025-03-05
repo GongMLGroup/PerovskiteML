@@ -20,9 +20,10 @@ class BasePruner(ABC):
         self.config = config
 
     @abstractmethod
-    def prune(self, dataset):
+    def prune(self, dataset: BaseDataset) -> BaseDataset:
         """Prune input data according to config"""
-        pass
+        dataset.metadata.processing_history.append(self.config.method)
+        return dataset
 
 
 class PrunerFactory:
@@ -119,6 +120,8 @@ class FeaturePruner(BasePruner):
             remove_sections=self.config.sections,
             remove_features=self.config.features
         )
+        
+        super().prune(dataset)
         return dataset
 
 
@@ -133,6 +136,8 @@ class BreadthPruner(BasePruner):
                 dataset._features,
                 self.config.sparsity_threshold
             )
+            
+        super().prune(dataset)
         return dataset
 
 
@@ -147,7 +152,8 @@ class DepthPruner(BasePruner):
                 dataset._features,
                 self.config.layer_coverage
             )
-
+            
+        super().prune(dataset)
         return dataset
 
 
