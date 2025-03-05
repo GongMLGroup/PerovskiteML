@@ -22,7 +22,7 @@ class BasePruner(ABC):
     @abstractmethod
     def prune(self, dataset: BaseDataset) -> BaseDataset:
         """Prune input data according to config"""
-        dataset.metadata.processing_history.append(self.config.method)
+        dataset.metadata.processing_history.append(self.config)
         return dataset
 
 
