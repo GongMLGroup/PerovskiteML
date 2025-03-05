@@ -3,7 +3,8 @@ import dotenv
 import numpy as np
 
 from .utils import PROJECT_DIR
-from .data import DATABASE, DataSet
+from .data import ExpandedDataset, PerovskiteDatabase
+from . import preprocessing
 
 try:
     dotenv.load_dotenv(os.path.join(PROJECT_DIR, ".env"))
@@ -15,8 +16,9 @@ except KeyError:
 
 
 __all__ = [
-    "DATABASE",
-    "DataSet",
+    "ExpandedDataset",
+    "PerovskiteDatabase",
+    "preprocessing",
     "NEPTUNE_PROJECT",
     "NEPTUNE_API_TOKEN"
 ]

@@ -9,9 +9,10 @@ verbose = 1
 # 3: Debug and above
 
 
-[expansion]
-cache_dir = "data/expanded"
-force_reprocess = false
+[data]
+target_feature = "JV_default_PCE"
+cache_dir = "src/perovskiteml/data/expanded"
+force_recompute = false
 
 
 [pruning]

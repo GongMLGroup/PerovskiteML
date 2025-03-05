@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field
 from typing import Literal, Annotated, Union
-from .reduction import prune_and_combine
-# from ..data import DataSet
+from .reduction import prune_and_combine, prune_by_sparsity
+from ..data.base import BaseDataset
 
 
 # --------------------------
@@ -112,16 +112,13 @@ class FeaturePruner(BasePruner):
     def __init__(self, config: FeaturePrunerConfig):
         super().__init__(config)
 
-    def prune(self, dataset):
-        if not dataset.features:
-            dataset.get_dataset()
+    def prune(self, dataset: BaseDataset):
         print(f"Pruning sections: {self.config.sections}")
         print(f"Pruning features: {self.config.features}")
         dataset.remove(
-            sections=self.config.sections,
-            features=self.config.features
+            remove_sections=self.config.sections,
+            remove_features=self.config.features
         )
-        # Implement actual pruning logic
         return dataset
 
 
@@ -129,13 +126,13 @@ class FeaturePruner(BasePruner):
 class BreadthPruner(BasePruner):
     def __init__(self, config: BreadthPrunerConfig):
         super().__init__(config)
-    
-    def prune(self, dataset):
-        if not dataset.features:
-            dataset.get_dataset()
-            
+
+    def prune(self, dataset: BaseDataset):
         if self.config.sparsity_threshold > 0.0:
-            dataset.prune_by_sparsity(self.config.sparsity_threshold)
+            dataset._features = prune_by_sparsity(
+                dataset._features,
+                self.config.sparsity_threshold
+            )
         return dataset
 
 
@@ -144,18 +141,16 @@ class DepthPruner(BasePruner):
     def __init__(self, config: DepthPrunerConfig):
         super().__init__(config)
 
-    def prune(self, dataset):
+    def prune(self, dataset: BaseDataset):
         if self.config.layer_coverage < 1.0:
-            if not dataset.features:
-                dataset.get_dataset()
-            dataset.features = prune_and_combine(
-                dataset.features,
+            dataset._features = prune_and_combine(
+                dataset._features,
                 self.config.layer_coverage
             )
 
         return dataset
-    
-    
+
+
 @PrunerFactory.register_pruner("chain_pruner")
 class ChainPruner(BasePruner):
     def __init__(self, config: ChainPrunerConfig):
@@ -163,7 +158,7 @@ class ChainPruner(BasePruner):
         self.pruners = [PrunerFactory.create(
             step) for step in self.config.steps]
 
-    def prune(self, dataset):
+    def prune(self, dataset: BaseDataset):
         for pruner in self.pruners:
             dataset = pruner.prune(dataset)
         return dataset
