@@ -51,7 +51,10 @@ class PrunerFactory:
             config = cls._validate_dict_config(config)
 
         if config.method not in cls._pruners:
-            raise ValueError(f"Unknown pruner type: {config.method}")
+            raise ValueError(
+                f"Unregistered pruner type: {config.method}. "
+                f"Registered pruners include: {list(cls._pruners.keys())}"   
+            )
 
         return cls._pruners[config.method](config)
 
@@ -61,7 +64,10 @@ class PrunerFactory:
         method = config.get("method")
 
         if method not in cls._configs:
-            raise ValueError(f"Invalid pruner method: {method}")
+            raise ValueError(
+                f"Unregistered pruner type: {method}. "
+                f"Registered pruners include: {list(cls._pruners.keys())}"   
+            )
 
         return cls._configs[method](**config)
 
