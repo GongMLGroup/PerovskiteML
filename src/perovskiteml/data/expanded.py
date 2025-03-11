@@ -142,6 +142,7 @@ class ExpandedDataset(BaseDataset):
 
     def reset_features(self) -> None:
         self._features = deepcopy(self._all_features)
+        self.metadata.processing_history = []
         return
 
     @staticmethod
