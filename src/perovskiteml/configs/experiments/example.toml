@@ -37,12 +37,18 @@ method = "depth_pruner"
 layer_coverage = 0.75   # Minimum layers that contain 95% of devices
 
 
+# [model]
+# model_type = "xgboost"
+# eta = 0.1        # learning rate
+# max_depth = 10
+# n_estimators = 1000
 [model]
-name = "xgboost"
-eta = 0.3        # learning rate
-max_depth = 6
+model_type = "hist_gradient_boost"
+max_iter = 1000
+verbose = true
 
 
+# TODO: implement Neptune and Optuna
 [hyperparameters]
 n_trials = 200
 direction = "maximize"
