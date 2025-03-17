@@ -1139,6 +1139,7 @@ source = { editable = "." }
 dependencies = [
     { name = "bigtree" },
     { name = "ipykernel" },
+    { name = "joblib" },
     { name = "matplotlib" },
     { name = "neptune", extra = ["xgboost"] },
     { name = "openpyxl" },
@@ -1165,6 +1166,7 @@ dev = [
 requires-dist = [
     { name = "bigtree", specifier = ">=0.24.0" },
     { name = "ipykernel", specifier = ">=6.29.5" },
+    { name = "joblib", specifier = ">=1.4.2" },
     { name = "matplotlib", specifier = ">=3.10.0" },
     { name = "neptune", extras = ["xgboost"], specifier = ">=1.13.0" },
     { name = "openpyxl", specifier = ">=3.1.5" },
