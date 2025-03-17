@@ -13,6 +13,10 @@ from ._hist_gradient_boosting import (
     HistGradientBoostingConfig,
     HistGradientBoostingHandler
 )
+from ._random_forest import (
+    RandomForestConfig,
+    RandomForestRegressor
+)
 
 
 __all__ = [
@@ -29,6 +33,10 @@ __all__ = [
     
     # Hist Gradient Boosting
     "HistGradientBoostingConfig",
-    "HistGradientBoostingHandler"
+    "HistGradientBoostingHandler",
+    
+    # Random Forest
+    "RandomForestConfig",
+    "RandomForestRegressor",
 
 ]
