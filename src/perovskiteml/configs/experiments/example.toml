@@ -26,7 +26,10 @@ sections = [
     "Outdoor testing",
     "JV data",
 ]
-features = ["Outdoor_time_start", "Outdoor_time_end"]
+features = [
+    "Outdoor_time_start",
+    "Outdoor_time_end"
+]
 
 [[pruning.steps]]
 method = "breadth_pruner" # or "depth_pruner"
@@ -39,12 +42,16 @@ layer_coverage = 0.75   # Minimum layers that contain 95% of devices
 
 # [model]
 # model_type = "xgboost"
-# eta = 0.1        # learning rate
-# max_depth = 10
+# eta = 0.3        # learning rate
+# max_depth = 6
 # n_estimators = 1000
+# [model]
+# model_type = "hist_gradient_boost"
+# max_iter = 1000
+# verbose = true
 [model]
-model_type = "hist_gradient_boost"
-max_iter = 1000
+model_type = "random_forest"
+n_estimators = 100
 verbose = true
 
 

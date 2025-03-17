@@ -1,8 +1,8 @@
 import sys
+import shap
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import xgboost as xgb
 from perovskiteml.data import ExpandedDataset
 from perovskiteml.preprocessing import PrunerFactory
 from perovskiteml.utils.config_parser import load_config
@@ -37,16 +37,14 @@ def preprocess_data(X, y, config):
 
     # The preprocessor creates a transformed version of the data without human readable feature name. Replace these with the original feature names.
     # Create a list of feature names.
-    all_columns = list(X.select_dtypes(np.number).columns) + list(X.select_dtypes([bool, object]).columns)
+    all_columns = list(X.select_dtypes(np.number).columns) + \
+        list(X.select_dtypes([bool, object]).columns)
 
     X_transformed = pd.DataFrame(
         preprocessor.fit_transform(X, y))  # Transform data
     X_transformed.columns = all_columns  # Replace column names
 
-    X_train, X_val, y_train, y_val = train_test_split(
-        X_transformed, y, test_size=0.30, random_state=config["experiment"]["seed"]
-    )
-    return X_train, X_val, y_train, y_val
+    return X_transformed
 
 
 def run(config_path):
@@ -54,18 +52,35 @@ def run(config_path):
     dataset = ExpandedDataset.cache_or_compute(config["data"])
     pruner = PrunerFactory.create(config["pruning"])
     model = ModelFactory.create(config["model"])
-    
+
     pruner.prune(dataset)
     X, y = dataset.split_target()
-    X_train, X_val, y_train, y_val = preprocess_data(X, y, config)
-    
+    X_transformed = preprocess_data(X, y, config)
+    X_train, X_val, y_train, y_val = train_test_split(
+        X_transformed, y, test_size=0.30, random_state=config["experiment"]["seed"]
+    )
+
     model.fit(X_train, y_train, X_val, y_val)
-    
+    model.save("src/perovskiteml/results/models")
+
     # Analysis
-    plt.axline((0, 0), slope=1, color='k', linestyle='--')
-    plt.scatter(y_train, model.predict(X_train))
-    plt.scatter(y_val, model.predict(X_val))
-    plt.show()
+    explainer = shap.TreeExplainer(model.model)
+    shap_values = explainer.shap_values(X_transformed)
+    fig = plt.figure()
+    shap.summary_plot(
+        shap_values[:1000, :],
+        X_transformed.iloc[:1000, :],
+        plot_size=[12, 6.75],
+        show=True,
+    )
+    fig = plt.figure()
+    shap.summary_plot(
+        shap_values,
+        X_transformed,
+        plot_type="bar",
+        plot_size=[12, 6.75],
+        show=True,    
+    )
 
 
 if __name__ == "__main__":
