@@ -1,4 +1,8 @@
+import json
+import joblib
 from abc import ABC, abstractmethod
+from datetime import datetime
+from pathlib import Path
 from pydantic import BaseModel, Field
 from sklearn.metrics import root_mean_squared_error
 from scipy.stats import pearsonr
@@ -21,6 +25,30 @@ class BaseModelHandler(ABC):
     def predict(self, X):
         """Generate Predictions"""
         return self.model.predict(X)
+    
+    def save(self, path: Path | str) -> None:
+        path = Path(path)
+        version = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        path = path / self.config.model_type / version
+        path.mkdir(parents=True, exist_ok=True)
+        model_path = path / "model.joblib"
+        config_path = path / "config.json"
+        joblib.dump(self.model, model_path)
+        with open(config_path, "w") as file:
+            json.dump(self.config.model_dump(), file, indent=4)
+    
+    @classmethod  
+    def load(cls, path: Path | str):
+        path = Path(path)
+        model_path = path / "model.joblib"
+        config_path = path / "config.json"
+        model = joblib.load(model_path)
+        with open(config_path, "r") as file:
+            config = json.load(file)
+        instance = cls(config)
+        instance.model = model
+        return instance
+        
 
     def log_additional_info(self):
         """Log model-specific information to Neptune"""
