@@ -11,6 +11,7 @@ class XGBoostConfig(BaseModelConfig):
     early_stopping_rounds: int | None = None
     eta: float = Field(0.3, ge=0)
     max_depth: int = Field(6, ge=1)
+    n_jobs: int = -1
     random_state: int = 42
     
 

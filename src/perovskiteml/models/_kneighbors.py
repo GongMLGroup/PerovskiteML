@@ -9,6 +9,7 @@ class KNeighborsConfig(BaseModelConfig):
     model_type: Literal["knn"] = "knn"
     n_neighbors: int = Field(5, ge=1)
     weights: Literal["uniform", "distance"] = "uniform"
+    n_jobs: int = -1
         
 @ModelFactory.register_model("knn")
 class KNeighborsHandler(BaseModelHandler):
