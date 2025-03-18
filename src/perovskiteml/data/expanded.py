@@ -77,7 +77,7 @@ class ExpandedDataset(BaseDataset):
 
     @classmethod
     def cache_or_compute(
-        cls: 'ExpandedDataset',
+        cls,
         config: ExpansionConfig = ExpansionConfig(),
         **kwargs
     ) -> 'ExpandedDataset':
