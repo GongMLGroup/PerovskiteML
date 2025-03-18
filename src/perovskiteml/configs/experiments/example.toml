@@ -40,19 +40,41 @@ method = "depth_pruner"
 layer_coverage = 0.75   # Minimum layers that contain 95% of devices
 
 
-# [model]
-# model_type = "xgboost"
-# eta = 0.3        # learning rate
-# max_depth = 6
-# n_estimators = 1000
+# ---------------------------------------------------------
+# Data Preprocessing
+# ------------------
+#
+# This creates a preprocessor pipeline.
+# The order of the steps matters for the order
+# they are computed in the pipeline.
+# ---------------------------------------------------------
+
+[[process.categorical]]
+type = "encode"
+method = "ordinal"
+handle_unknown = 'use_encoded_value'
+unknown_value = -1
+# Additional kwargs can be included. scikit-learn has documentation for these.
+# https://scikit-learn.org/stable/modules/generated/sklearn.impute.SimpleImputer.html
+
+[[process.numerical]]
+type = "other"
+method = "passthrough"
+
+
+[model]
+model_type = "xgboost"
+eta = 0.3        # learning rate
+max_depth = 6
+n_estimators = 1000
 # [model]
 # model_type = "hist_gradient_boost"
 # max_iter = 1000
 # verbose = true
-[model]
-model_type = "random_forest"
-n_estimators = 100
-verbose = true
+# [model]
+# model_type = "random_forest"
+# n_estimators = 100
+# verbose = true
 
 
 # TODO: implement Neptune and Optuna
