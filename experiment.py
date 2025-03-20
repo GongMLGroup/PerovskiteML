@@ -1,17 +1,40 @@
+import os
 import sys
+import neptune.utils
 import shap
 import pandas as pd
 import numpy as np
+import neptune
 import matplotlib.pyplot as plt
+from typing import Optional
 from perovskiteml.data import ExpandedDataset
+from perovskiteml.data.base import BaseDataset
 from perovskiteml.preprocessing.preprocessor import Preprocessor
 from perovskiteml.preprocessing import PrunerFactory
-from perovskiteml.utils.config_parser import load_config
+from perovskiteml.utils.config_parser import load_config, config_to_neptune_format
 from perovskiteml.models import ModelFactory
 from sklearn.model_selection import train_test_split
 
+def init_neptune(config: dict) -> Optional[neptune.Run]:
+    if not config["experiment"]["neptune"]:
+        return None
+    
+    api_token = os.path.expandvars(config["logging"]["api_token"])
+    
+    run = neptune.init_run(
+        project=config["logging"]["project"],
+        api_token=api_token,
+        tags=config["logging"]["tags"]
+    )
+    run["sys/group_tags"].add(config["logging"]["group_tags"])
+    return run
+
 def run(config_path):
     config = load_config(config_path)
+    neptune_run = init_neptune(config)
+    if neptune_run:
+        neptune_run["config"] = config_to_neptune_format(config)
+        neptune_run["config/file"].upload(config_path)
     dataset = ExpandedDataset.cache_or_compute(config["data"])
     pruner = PrunerFactory.create(config["pruning"])
     preprocessor = Preprocessor(config["process"])
@@ -35,16 +58,22 @@ def run(config_path):
         shap_values[:1000, :],
         X_transformed.iloc[:1000, :],
         plot_size=[12, 6.75],
-        show=True,
+        show=False,
     )
+    if neptune_run:
+        neptune_run['plots/beeswarm'].upload(fig)
+    
     fig = plt.figure()
     shap.summary_plot(
         shap_values,
         X_transformed,
         plot_type="bar",
         plot_size=[12, 6.75],
-        show=True,    
+        show=False,    
     )
+    if neptune_run:
+        neptune_run['plots/bar'].upload(fig)
+        neptune_run.stop()
 
 
 if __name__ == "__main__":

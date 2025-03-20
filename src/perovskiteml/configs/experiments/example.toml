@@ -8,6 +8,11 @@ verbose = 1
 # 2: Info and above
 # 3: Debug and above
 
+[logging]
+project = "gongjiawei105/PVSK-ML"
+api_token = "${NEPTUNE_API_TOKEN}"
+group_tags = ["example"]
+tags = ["xgboost"]
 
 [data]
 target_feature = "JV_default_PCE"
@@ -96,7 +101,3 @@ method = "depth_pruner"
 layer_coverage = { type = "float", low = 0, high = 1 }
 
 
-[logging]
-project = "gongjiawei105/PVSK-ML"
-api_token = "${NEPTUNE_API_TOKEN}"
-tags = ["example", "xgboost"]
