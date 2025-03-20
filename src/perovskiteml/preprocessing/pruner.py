@@ -117,7 +117,7 @@ class ChainPrunerConfig(BasePrunerConfig):
 @PrunerFactory.register_pruner("feature_pruner")
 class FeaturePruner(BasePruner):
     def __init__(self, config: FeaturePrunerConfig):
-        super().__init__(config)
+        self.config = config
 
     def prune(self, dataset: BaseDataset):
         print(f"Pruning sections: {self.config.sections}")
@@ -134,7 +134,7 @@ class FeaturePruner(BasePruner):
 @PrunerFactory.register_pruner("breadth_pruner")
 class BreadthPruner(BasePruner):
     def __init__(self, config: BreadthPrunerConfig):
-        super().__init__(config)
+        self.config = config
 
     def prune(self, dataset: BaseDataset):
         if self.config.sparsity_threshold > 0.0:
@@ -150,7 +150,7 @@ class BreadthPruner(BasePruner):
 @PrunerFactory.register_pruner("depth_pruner")
 class DepthPruner(BasePruner):
     def __init__(self, config: DepthPrunerConfig):
-        super().__init__(config)
+        self.config = config
 
     def prune(self, dataset: BaseDataset):
         if self.config.layer_coverage < 1.0:
@@ -166,7 +166,7 @@ class DepthPruner(BasePruner):
 @PrunerFactory.register_pruner("chain_pruner")
 class ChainPruner(BasePruner):
     def __init__(self, config: ChainPrunerConfig):
-        super().__init__(config)
+        self.config = config
         self.pruners = [PrunerFactory.create(
             step) for step in self.config.steps]
 
