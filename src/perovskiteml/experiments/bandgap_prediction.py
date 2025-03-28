@@ -9,6 +9,7 @@ from typing import Optional
 from perovskiteml.data.base import BaseDataset
 from perovskiteml.utils.config_parser import load_config, config_to_neptune_format
 from perovskiteml.models import ModelFactory
+from perovskiteml.preprocessing.preprocessor import Preprocessor
 from perovskiteml.models.base import BaseModelHandler
 from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
@@ -123,13 +124,18 @@ def run(config_path):
         neptune_run["config/file"].upload(config_path)
 
     dataset = BaseDataset.load(config["data"]["path"])
+    print(config["process"])
+    preprocessor = Preprocessor(config["process"])
     model = ModelFactory.create(config["model"])
 
     print(dataset.data.head())
 
     X, y = dataset.split_target(config["data"]["target_feature"])
+    X_transformed = preprocessor.preprocess(X, y)
+    
+    print(X_transformed.head())
     X_train, X_val, y_train, y_val = train_test_split(
-        X, y, test_size=0.30, random_state=config["experiment"]["seed"]
+        X_transformed, y, test_size=0.30, random_state=config["experiment"]["seed"]
     )
 
     model.fit(X_train, y_train, X_val, y_val)

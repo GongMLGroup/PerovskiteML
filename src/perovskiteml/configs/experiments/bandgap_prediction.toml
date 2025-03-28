@@ -1,7 +1,7 @@
 [experiment]
 name = "example_experiment"
 seed = 42
-neptune = true              # Log to neptune
+neptune = false              # Log to neptune
 local_save = false
 verbose = 1
 
@@ -14,6 +14,11 @@ tags = ["xgboost"]
 [data]
 target_feature = "E_g"
 path = "src/perovskiteml/data/processed/element-composition_band-gap.parquet"
+
+[process]
+[[process.numerical]]
+type = "scale"
+method = "normalize"
 
 [model]
 model_type = "xgboost"
