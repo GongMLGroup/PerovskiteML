@@ -2,6 +2,7 @@ import json
 import joblib
 from abc import ABC, abstractmethod
 from datetime import datetime
+from neptune import Run
 from pathlib import Path
 from pydantic import BaseModel, Field
 from sklearn.metrics import root_mean_squared_error
@@ -54,11 +55,13 @@ class BaseModelHandler(ABC):
         """Log model-specific information to Neptune"""
         pass
 
-    def log_metrics(self, run, X, y, prefix="val"):
+    def log_metrics(self, X, y, run: Run = None, prefix="val"):
         """Log shared metrics"""
         predicted = self.predict(X)
-        run[f"{prefix}/rmse"] = root_mean_squared_error(y, predicted)
-        run[f"{prefix}/pearson"] = pearsonr(y, predicted)[0]
+        
+        if run:
+            run[f"{prefix}/rmse"] = root_mean_squared_error(y, predicted)
+            run[f"{prefix}/pearson"] = pearsonr(y, predicted)[0]
 
 
 class ModelFactory:
@@ -80,7 +83,7 @@ class ModelFactory:
         return decorator
     
     @classmethod
-    def create(cls, config: dict | BaseModelConfig) -> BaseModel:
+    def create(cls, config: dict | BaseModelConfig) -> BaseModelHandler:
         if isinstance(config, dict):
             config = cls._validate_dict_config(config)
             
