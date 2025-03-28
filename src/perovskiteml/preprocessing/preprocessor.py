@@ -7,6 +7,7 @@ from sklearn.impute import SimpleImputer, KNNImputer
 from sklearn.preprocessing import (
     StandardScaler,
     MinMaxScaler,
+    Normalizer,
     RobustScaler,
     OneHotEncoder,
     OrdinalEncoder
@@ -34,6 +35,7 @@ class Preprocessor:
         },
         "scale": {
             "standard": StandardScaler,
+            "normalize": Normalizer,
             "minmax": MinMaxScaler,
             "robust": RobustScaler
         },
@@ -55,6 +57,10 @@ class Preprocessor:
     @classmethod
     def _build_pipeline(cls, steps: list[StepConfig]) -> Pipeline:
         name_step_pairs: list[tuple] = []
+        
+        if not steps:
+            return Pipeline([("other", "passthrough")])
+        
         for step in steps:
             config = step.model_dump(exclude=["type", "method"])
             pair = (
