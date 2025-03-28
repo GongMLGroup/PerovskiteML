@@ -1,4 +1,5 @@
 import xgboost as xgb
+from neptune.integrations.xgboost import NeptuneCallback
 from pydantic import Field
 from typing import Literal
 from .base import BaseModelConfig, BaseModelHandler, ModelFactory
@@ -13,16 +14,22 @@ class XGBoostConfig(BaseModelConfig):
     max_depth: int = Field(6, ge=1)
     n_jobs: int = -1
     random_state: int = 42
-    
+
 
 @ModelFactory.register_model("xgboost")
 class XGBoostHandler(BaseModelHandler):
-    def fit(self, X_train, y_train, X_val, y_val):
-        self.model = xgb.XGBRegressor(**self.config.model_dump(exclude="model_type"))
+    def fit(self, X_train, y_train, X_val, y_val) -> None:
+        self.model = xgb.XGBRegressor(
+            **self.config.model_dump(exclude="model_type"),
+            callbacks=self.callbacks
+        )
         self.model.fit(
             X_train, y_train,
-            eval_set = [(X_val, y_val)]
+            eval_set=[(X_val, y_val)]
         )
-    
-    def log_additional_info(self, run):
-        run["feature_importance"] = list(self.model.feature_importances_)
+
+    def init_callbacks(self, run=None) -> None:
+        if run:
+            self.callbacks.append(
+                NeptuneCallback(run=run, log_model=False, log_importance=False)
+            )
