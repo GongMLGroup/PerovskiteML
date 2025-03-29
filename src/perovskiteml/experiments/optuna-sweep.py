@@ -35,7 +35,7 @@ def run(config_path):
         X_train, X_val, y_train, y_val = train_test_split(
             X_transformed, y, test_size=0.30, random_state=config["experiment"]["seed"]
         )
-        model.fit(X_train, y_train, X_val, y_val, verbose=False)
+        model.fit(X_train, y_train, X_val, y_val)
         y_pred = model.predict(X_train)
         return root_mean_squared_error(y_pred, y_train)
 
@@ -46,7 +46,7 @@ def run(config_path):
             neptune_callback = None
         study.optimize(
             objective,
-            callbacks=[neptune_callback],
+            callbacks=[neptune_callback] if neptune_callback else None,
             n_trials=config_dict["hyperparameters"]["n_trials"]
         )
 
