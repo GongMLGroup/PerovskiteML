@@ -22,7 +22,7 @@ study_name = "example_opt"
 
 [data]
 target_feature = "JV_default_PCE"
-cache_dir = "src/perovskiteml/data/expanded"
+cache_dir = "data/expanded"
 force_recompute = false
 
 [pruning]

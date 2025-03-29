@@ -28,8 +28,8 @@ class ExpansionConfig(BaseModel):
     """
     target_feature: str = ""
     force_recompute: bool = False
-    cache_dir: Path = Path("src/perovskiteml/data/expanded")
-    source_dir: Path = Path("src/perovskiteml/data/clean")
+    cache_dir: Path = Path("data/expanded")
+    source_dir: Path = Path("data/clean")
     cache_file: Path = Path("dataset.parquet")
     features_file: Path = Path("features.json")
     section_keys_file: Path = Path("section_keys.json")

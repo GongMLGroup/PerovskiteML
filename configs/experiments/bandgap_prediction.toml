@@ -13,7 +13,7 @@ tags = ["xgboost"]
 
 [data]
 target_feature = "E_g"
-path = "src/perovskiteml/data/processed/element-composition_band-gap.parquet"
+path = "/data/processed/element-composition_band-gap.parquet"
 
 [process]
 [[process.numerical]]
