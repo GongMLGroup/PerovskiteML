@@ -1,0 +1,4 @@
+# Processed Data
+*.parquet
+expanded/
+processed/

@@ -3,7 +3,7 @@ import pandas as pd
 
 from .expansion import expand_dataset
 from .reduction import reduce_data, partition_by_pattern
-from .logger import data_logger, setup_logger
+from ..utils import data_logger, setup_logger
 
 
 def _to_numeric(col):

@@ -2,6 +2,8 @@ import pandas as pd
 import numpy as np
 import bisect
 import re
+from collections import deque
+from bigtree import dict_to_tree, tree_to_dict
 
 
 def find_sparsity(column):
@@ -102,7 +104,7 @@ def is_pattern(string):
         "[Mat.1; Mat.2; ... | Mat.3; ... | Mat.4 | ...]"
         "[Gas1; Gas2 >> Gas3; ... >> ... | Gas4 >> … | Gas5 | ... ]"
     """
-    return matches_regex(">>|;|\|", string)
+    return matches_regex(r">>|;|\|", string)
 
 
 def has_concentrations(string):
@@ -213,3 +215,59 @@ def remove_features(features, remove):
         
     """
     return [feature for feature in features if feature['parent'] not in remove]
+
+
+def percent_index(arr, percent=0.95):
+    """Finds the index where a given percent of data falls within.
+    
+    Args:
+        arr (array): The bitarray which describes the sparsity of the data.
+        percent (float, optional): The percentile threshold.
+            Defaults to 0.95.
+
+    Returns:
+        int: The index where a given percent of data falls within.
+
+    """
+    total = arr.sum()
+    target = total*percent
+    cumulative = np.cumsum(arr)
+    return np.where(cumulative >= target)[0][0]
+
+def remove_nodes_bfs(root, n):
+    if not root:
+        return None
+
+    # Use a queue for BFS traversal
+    queue = deque([root])
+
+    while queue:
+        node = queue.popleft()
+        
+        # Remove children that do not satisfy the condition
+        # Only children are preserved
+        children = node.children
+        if len(children) > 1:
+            counts = np.array([child.counts for child in children])
+            index = percent_index(counts, n)
+            if index < 1:
+                index += 1
+            
+            node.children = children[0:index]
+        
+        for child in node.children:
+            queue.append(child)
+
+    return root
+
+def prune_and_combine(feature_list, coverage_threshold=0.95):
+    for feature in feature_list:
+        tree_dict = feature["tree"]
+        if not tree_dict:
+            continue
+        tree = dict_to_tree(tree_dict)
+        pruned_tree = remove_nodes_bfs(tree, coverage_threshold)
+        pruned_features = [leaf.name for leaf in pruned_tree.leaves]
+        feature["children"] = pruned_features
+        feature["tree"] = tree_to_dict(pruned_tree)
+    return feature_list

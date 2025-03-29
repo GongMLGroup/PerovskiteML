@@ -24,9 +24,8 @@ From the Perovskite database reference document:
 import re
 import pandas as pd
 import numpy as np
-from bigtree import Node
+from bigtree import Node, tree_to_dict
 from .reduction import find_sparsity, sort_by_sparsity, is_valid_pattern
-
 
 
 DEPTH_NAMES = {
@@ -43,7 +42,7 @@ DEPTH_DELIM = {
 
 def extract_features(seq, delim=';'):
     """Converts a sequence of encoded data into a list of features.
-    
+
     Args:
         seq (str): The sequence of encoded data.
         delim (str): The delimiter used to separate features.
@@ -67,9 +66,9 @@ def extract_features(seq, delim=';'):
 
 def generate_children(data, delim):
     """Generates the child features for a column of data.
-    
+
     Each column of the generated dataframe is a child feature.
-    
+
     Args:
         data (series): The column of data.
         delim (str): The delimiter used to separate features.
@@ -85,9 +84,9 @@ def generate_children(data, delim):
 
 def feature_counts(children, count_none=True):
     """Finds the maximum layer number for each row of data and sums along the rows.
-    
+
     This counts how many times a maximum layer occurs.
-    
+
     Args:
         children (dataframe): The child features.
         count_none (bool, optional): Counts the 0th layer as a layer.
@@ -122,44 +121,9 @@ def feature_counts(children, count_none=True):
     return expandedbitmat.sum(axis=0)
 
 
-def percent_index(arr, percent=0.95):
-    """Finds the index where a given percent of data falls within.
-    
-    Args:
-        arr (array): The bitarray which describes the sparsity of the data.
-        percent (float, optional): The percentile threshold.
-            Defaults to 0.95.
-
-    Returns:
-        int: The index where a given percent of data falls within.
-
-    """
-    total = arr.sum()
-    target = total*percent
-    cumulative = np.cumsum(arr)
-    return np.where(cumulative >= target)[0][0]
-
-
-def filter_children(children, percent):
-    """Filters children within a given percentile.
-    
-    Args:
-        children (dataframe): The child features.
-        percent (float): The percentile threshold.
-
-    Returns:
-        dataframe: The filtered child features.
-
-    """
-    counts = feature_counts(children)
-    index = percent_index(counts, percent)
-    children = children[children.columns[0:index]]
-    return children
-
-
-def feature_tree(name, data, parent=None, iter=0, max_iter=len(DEPTH_NAMES), is_only=False, percent=1.0):
+def _feature_tree(name, data, parent=None, iter=0, max_iter=len(DEPTH_NAMES), is_only=False, counts=0):
     """Generates a tree of features from a column of encoded data.
-    
+
     Args:
         name (str): The name of the feature.
         data (series): The column of data.
@@ -171,45 +135,44 @@ def feature_tree(name, data, parent=None, iter=0, max_iter=len(DEPTH_NAMES), is_
             Defaults to len(DEPTH_NAMES).
         is_only (bool, optional): If the current node is an only child.
             Defaults to False.
-        percent (float, optional): The percentile threshold.
-            Defaults to 1.0.
+        counts (int, optional): The device counts for each layer.
+            Defaults to 0.
 
     Returns:
         Node: The root node of the tree.
 
     """
     if is_only:
-        root = Node(DEPTH_NAMES[iter-1], data=data, parent=parent)
+        root = Node(DEPTH_NAMES[iter-1], data=data,
+                    parent=parent, counts=counts)
     else:
-        root = Node(name, data=data, parent=parent)
+        root = Node(name, data=data, parent=parent, counts=counts)
     if iter >= max_iter:
         return
 
     children = generate_children(data, delim=DEPTH_DELIM[iter])
     n_children = np.shape(children)[1]
 
-    # Pruning
-    if (percent < 1.0) and (n_children > 0):
-        children = filter_children(children, percent)
-        n_children = np.shape(children)[1]
+    if n_children > 0:
+        counts = feature_counts(children)
 
     is_only = n_children <= 1
-    for child in children:
-        feature_tree(
+    for (i, child) in enumerate(children):
+        _feature_tree(
             f"{DEPTH_NAMES[iter]}_{child}",
             children[child],
             root,
             iter+1,
             max_iter,
             is_only,
-            percent
+            int(counts[i])
         )
     return root
 
 
 def _set_name(name, leaf):
     """Sets the name of a leaf node.
-    
+
     Args:
         name (str): The name to set.
         leaf (Node): The leaf node.
@@ -226,12 +189,12 @@ def _set_name(name, leaf):
 
 def generate_name(leaf, name=None):
     """Recursively generates a name for a leaf node.
-    
+
     Steps through the nodes to name the feature at the leaf node based on its depth. Examples of names at different depths are:
         - Depth 0: OriginalFeature_Layer_0
         - Depth 1: OriginalFeature_Layer_1_Feature_0
         - Depth 2: OriginalFeature_Layer_1_Feature_2_Deposition_1
-    
+
     Args:
         leaf (Node): The leaf node.
         name (str, optional): The name to set.
@@ -254,9 +217,9 @@ def generate_name(leaf, name=None):
 
 def leaf_matrix(root):
     """Generates a dataframe of the data from the leaf nodes of a tree.
-    
+
     The columns are labeled with the node names.
-    
+
     Args:
         root (Node): The root node of the tree.
 
@@ -269,14 +232,12 @@ def leaf_matrix(root):
     return pd.DataFrame(leaves.transpose(), columns=columns)
 
 
-def expand_data(name: str, data, percent: float = 1.0, verbosity: int = 0):
+def expand_data(name: str, data, verbosity: int = 0):
     """Expands the encoded data from a column of data.
-    
+
     Args:
         name (str): Name of the feature.
         data (series): The column of data.
-        percent (float, optional): The percentile threshold.
-            Defaults to 1.0.
         verbosity (int, optional): The verbosity level.
             Defaults to 0.
 
@@ -284,23 +245,21 @@ def expand_data(name: str, data, percent: float = 1.0, verbosity: int = 0):
         dataframe: The expanded data.
 
     """
-    tree = feature_tree(name, data, percent=percent)
+    tree = _feature_tree(name, data)
     if verbosity > 2:
         tree.show()
-    return leaf_matrix(tree)
+    return tree
 
 
-def expand_dataset(data, features=None, percent: float = 1.0, verbosity: int = 0):
+def expand_dataset(data, features=None, verbosity: int = 0):
     """Expands the encoded data from a dataset.
-    
+
     Iterates over each column to expand the data.
 
     Args:
         data (dataframe): The dataset.
         features (list, optional): The list of features to expand.
             Defaults to None.
-        percent (float, optional): The percentile threshold.
-            Defaults to 1.0.
         verbosity (int, optional): The verbosity level.
             Defaults to 0.
 
@@ -313,20 +272,22 @@ def expand_dataset(data, features=None, percent: float = 1.0, verbosity: int = 0
     expanded_data = []
     if type(features) is dict:
         for (feature, name) in features.items():
-            expanded_data.append(expand_data(
-                name, data[feature], percent=percent, verbosity=verbosity))
+            expanded_tree = expand_data(
+                name, data[feature], verbosity=verbosity)
+            expanded_data.append(leaf_matrix(expanded_tree))
     else:
         for feature in features:
-            expanded_data.append(expand_data(
-                feature, data[feature], percent=percent, verbosity=verbosity))
+            expanded_tree = expand_data(
+                feature, data[feature], verbosity=verbosity)
+            expanded_data.append(leaf_matrix(expanded_tree))
     return pd.concat(expanded_data, axis=1)
 
 
 def expand_sort(data, ref):
     """Expands a dataset and sorts a reference dictionary of the features by sparsity.
-    
+
     Detects and expands valid encoded features and passes the rest.
-    
+
     Args:
         data (dataframe): The dataset.
         ref (dataframe): The reference dictionary for the database.
@@ -342,12 +303,16 @@ def expand_sort(data, ref):
     valid_pattern_mask = is_valid_pattern(ref)
     for (i, feature) in enumerate(ref['Field']):
         if valid_pattern_mask[i]:
-            expanded_feature = expand_data(feature, data[feature])
+            expanded_tree = expand_data(feature, data[feature])
+            expanded_feature = leaf_matrix(expanded_tree)
             expanded_data.append(expanded_feature)
+            for leaf in expanded_tree.leaves:
+                leaf.name = generate_name(leaf)
             features.append({
                 'parent': feature,
                 'children': expanded_feature.columns.to_list(),
                 'sparsity': find_sparsity(data[feature]),
+                'tree': tree_to_dict(expanded_tree, attr_dict={"counts": "counts"})
             })
         else:
             expanded_data.append(data[feature])
@@ -355,6 +320,7 @@ def expand_sort(data, ref):
                 'parent': feature,
                 'children': [feature],
                 'sparsity': find_sparsity(data[feature]),
+                'tree': {}
             })
     expanded_data = pd.concat(expanded_data, axis=1)
     features = sort_by_sparsity(features)

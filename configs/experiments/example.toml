@@ -1,0 +1,104 @@
+[experiment]
+name = "example"
+seed = 42
+local_save = true
+verbose = 1
+# 0: Silent, only critical errors
+# 1: Warnings and above
+# 2: Info and above
+# 3: Debug and above
+
+[logging]
+enabled = false
+project = "gongjiawei105/PVSK-ML"
+api_token = "${NEPTUNE_API_TOKEN}"
+group_tags = ["example"]
+tags = ["xgboost"]
+
+[data]
+target_feature = "JV_default_PCE"
+cache_dir = "data/expanded"
+force_recompute = false
+
+
+[pruning]
+method = "chain_pruner"
+
+[[pruning.steps]]
+method = "feature_pruner"
+sections = [
+    "Reference information",
+    "Cell definition",
+    "Outdoor testing",
+    "JV data",
+]
+features = [
+    "Outdoor_time_start",
+    "Outdoor_time_end"
+]
+
+[[pruning.steps]]
+method = "breadth_pruner" # or "depth_pruner"
+sparsity_threshold = 0.25 # Prune features missing more than 25% of data
+
+[[pruning.steps]]
+method = "depth_pruner"
+layer_coverage = 0.75   # Minimum layers that contain 95% of devices
+
+
+# ---------------------------------------------------------
+# Data Preprocessing
+# ------------------
+#
+# This creates a preprocessor pipeline.
+# The order of the steps matters for the order
+# they are computed in the pipeline.
+# ---------------------------------------------------------
+
+[[process.categorical]]
+type = "encode"
+method = "ordinal"
+handle_unknown = 'use_encoded_value'
+unknown_value = -1
+# Additional kwargs can be included. scikit-learn has documentation for these.
+# https://scikit-learn.org/stable/modules/generated/sklearn.impute.SimpleImputer.html
+
+[[process.numerical]]
+type = "other"
+method = "passthrough"
+
+
+[model]
+model_type = "xgboost"
+eta = 0.3        # learning rate
+max_depth = 6
+n_estimators = 1000
+# [model]
+# model_type = "hist_gradient_boost"
+# max_iter = 1000
+# verbose = true
+# [model]
+# model_type = "random_forest"
+# n_estimators = 100
+# verbose = true
+
+
+# TODO: implement Neptune and Optuna
+[hyperparameters]
+n_trials = 200
+direction = "maximize"
+study_name = "example_opt"
+
+[hyperparameters.model]
+eta = { type = "float", low = 1e-4, high = 0.1, log = true }
+max_depth = { type = "int", low = 3, high = 10 }
+
+[[hyperparameters.pruning]]
+method = "breadth_pruner"
+sparsity_threshold = { type = "float", low = 0, high = 1 }
+
+[[hyperparameters.pruning]]
+method = "depth_pruner"
+layer_coverage = { type = "float", low = 0, high = 1 }
+
+
