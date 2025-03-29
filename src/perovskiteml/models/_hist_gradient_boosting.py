@@ -16,7 +16,7 @@ class HistGradientBoostingConfig(BaseModelConfig):
 
 @ModelFactory.register_model("hist_gradient_boost")
 class HistGradientBoostingHandler(BaseModelHandler):
-    def fit(self, X_train, y_train, X_val, y_val):
+    def fit(self, X_train, y_train, X_val, y_val) -> None:
         self.model = HistGradientBoostingRegressor(
             **self.config.model_dump(exclude="model_type")
         )

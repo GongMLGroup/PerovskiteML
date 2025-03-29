@@ -13,8 +13,10 @@ class KNeighborsConfig(BaseModelConfig):
         
 @ModelFactory.register_model("knn")
 class KNeighborsHandler(BaseModelHandler):
-    def fit(self, X_train, y_train, X_val, y_val):
-        self.model = KNeighborsRegressor(**self.config.model_dump(exclude={"model_type"}))
+    def fit(self, X_train, y_train, X_val, y_val) -> None:
+        self.model = KNeighborsRegressor(
+            **self.config.model_dump(exclude={"model_type"})
+        )
         self.model.fit(
             X_train, y_train
         )

@@ -14,18 +14,20 @@ class XGBoostConfig(BaseModelConfig):
     max_depth: int = Field(6, ge=1)
     n_jobs: int = -1
     random_state: int = 42
+    verbose: bool = True
 
 
 @ModelFactory.register_model("xgboost")
 class XGBoostHandler(BaseModelHandler):
     def fit(self, X_train, y_train, X_val, y_val) -> None:
         self.model = xgb.XGBRegressor(
-            **self.config.model_dump(exclude="model_type"),
+            **self.config.model_dump(exclude={"model_type", "verbose"}),
             callbacks=self.callbacks
         )
         self.model.fit(
             X_train, y_train,
-            eval_set=[(X_val, y_val)]
+            eval_set=[(X_train, y_train), (X_val, y_val)],
+            verbose=self.config.verbose
         )
 
     def init_callbacks(self, run=None) -> None:

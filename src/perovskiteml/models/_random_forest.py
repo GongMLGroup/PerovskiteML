@@ -15,7 +15,7 @@ class RandomForestConfig(BaseModelConfig):
 
 @ModelFactory.register_model("random_forest")
 class RandomForestHandler(BaseModelHandler):
-    def fit(self, X_train, y_train, X_val, y_val):
+    def fit(self, X_train, y_train, X_val, y_val) -> None:
         self.model = RandomForestRegressor(
             **self.config.model_dump(exclude="model_type")
         )
