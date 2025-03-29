@@ -2,7 +2,6 @@ import json
 import joblib
 import numpy as np
 from abc import ABC, abstractmethod
-from datetime import datetime
 from neptune import Run
 from pathlib import Path
 from pydantic import BaseModel, Field
@@ -41,12 +40,11 @@ class BaseModelHandler(ABC):
 
     def save(self, path: Path | str) -> None:
         path = Path(path)
-        version = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        path = path / self.config.model_type / version
+        path = path / self.config.model_type
         path.mkdir(parents=True, exist_ok=True)
         model_path = path / "model.joblib"
         config_path = path / "config.json"
-        joblib.dump(self.model, model_path)
+        joblib.dump(self.model, model_path, compress=3)
         with open(config_path, "w") as file:
             json.dump(self.config.model_dump(), file, indent=4)
 

@@ -1,11 +1,11 @@
 [experiment]
 name = "example_experiment"
-seed = 42
-neptune = false              # Log to neptune
+seed = 42            # Log to neptune
 local_save = false
 verbose = 1
 
 [logging]
+enabled = true
 project = "gongjiawei105/PVSK-ML"
 api_token = "${NEPTUNE_API_TOKEN}"
 group_tags = ["bandgap"]
