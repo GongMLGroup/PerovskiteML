@@ -6,7 +6,7 @@ import pyarrow.parquet as pq
 
 from datetime import datetime
 from pathlib import Path
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Union
 
 
@@ -39,11 +39,11 @@ class DataSavingError(Exception):
 
 
 class DatasetMetadata(BaseModel):
-    creation_date: datetime
-    data_hash: str
-    source_path: Path
-    feature_count: int
-    sample_count: int
+    creation_date: datetime = Field(default_factory=datetime.now)
+    data_hash: str = ""
+    source_path: Path = Path("")
+    feature_count: int = 0
+    sample_count: int = 0
     target_feature: str = ""
     processing_history: list[str] = []
     tags: list[str] = []
@@ -56,9 +56,10 @@ class DatasetMetadata(BaseModel):
 class BaseDataset:
     SUPPORTED_FORMATS = {'.csv', '.parquet'}
 
-    def __init__(self, data: pd.DataFrame, metadata: DatasetMetadata):
+    def __init__(self, data: pd.DataFrame, metadata: DatasetMetadata = DatasetMetadata()):
         self._data = data
         self._metadata = metadata
+        self._update_metadata()
         # self._validate()
 
     @classmethod
@@ -134,6 +135,7 @@ class BaseDataset:
     def _update_metadata(self, path: Path = "") -> None:
         if path:
             self.metadata.source_path = path
+        self.metadata.sample_count, self.metadata.feature_count = self.data.shape
         self.metadata.data_hash = self.calculate_hash()
         self.metadata.creation_date = datetime.now()
 
