@@ -6,6 +6,7 @@ verbose = 1
 
 [logging]
 enabled = true
+name = "BGPRED"
 project = "gongjiawei105/PVSK-ML"
 api_token = "${NEPTUNE_API_TOKEN}"
 group_tags = ["bandgap"]

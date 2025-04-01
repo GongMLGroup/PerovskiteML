@@ -1,7 +1,7 @@
 [experiment]
 name = "example"
 seed = 42
-local_save = true
+local_save = false
 verbose = 1
 # 0: Silent, only critical errors
 # 1: Warnings and above
@@ -9,7 +9,8 @@ verbose = 1
 # 3: Debug and above
 
 [logging]
-enabled = false
+enabled = true
+name = "EXAMPLE"
 project = "gongjiawei105/PVSK-ML"
 api_token = "${NEPTUNE_API_TOKEN}"
 group_tags = ["example"]

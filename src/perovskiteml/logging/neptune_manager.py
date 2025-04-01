@@ -1,16 +1,15 @@
 import os
 import neptune
 from contextlib import contextmanager
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
+from typing import Optional
 
 
 class NeptuneConfig(BaseModel):
     enabled: bool = True
-    project: str
-    api_token: str
+    api_token: Optional[str] = None
     group_tags: list[str] = []
-    tags: list[str] = []
-    description: str = ""
+    model_config = ConfigDict(extra="allow")
 
 
 @contextmanager
@@ -24,14 +23,12 @@ def neptune_context(config: NeptuneConfig | dict):
         return
 
     # Expand environment variables in token
-    api_token = os.path.expandvars(config.api_token)
+    api_token = os.path.expandvars(config.api_token) if config.api_token else None
 
     try:
         run = neptune.init_run(
-            project=config.project,
+            **config.model_dump(exclude={"enabled", "api_token", "group_tags"}),
             api_token=api_token,
-            tags=config.tags,
-            description=config.description
         )
         run["sys/group_tags"].add(config.group_tags)
         yield run
