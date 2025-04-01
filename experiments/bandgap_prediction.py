@@ -1,6 +1,5 @@
 import os
 import sys
-import neptune.utils
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -14,8 +13,6 @@ from perovskiteml.models import ModelFactory
 from perovskiteml.preprocessing.preprocessor import Preprocessor
 from perovskiteml.models.base import BaseModelHandler
 from sklearn.model_selection import train_test_split, cross_val_score
-from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
-
 
 def plot_actual_vs_predicted(
     config: dict,
