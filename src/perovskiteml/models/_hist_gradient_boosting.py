@@ -1,5 +1,5 @@
 from sklearn.ensemble import HistGradientBoostingRegressor
-from pydantic import Field
+from pydantic import Field, ConfigDict
 from typing import Literal
 from .base import BaseModelConfig, BaseModelHandler, ModelFactory
 
@@ -12,6 +12,7 @@ class HistGradientBoostingConfig(BaseModelConfig):
     max_depth: int | None = None
     max_iter: int = Field(100, ge=1)
     verbose: bool = False
+    model_config = ConfigDict(extra="allow")
 
 
 @ModelFactory.register_model("hist_gradient_boost")

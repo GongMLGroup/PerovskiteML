@@ -1,5 +1,5 @@
 from sklearn.ensemble import RandomForestRegressor
-from pydantic import Field
+from pydantic import Field, ConfigDict
 from typing import Literal
 from .base import BaseModelConfig, BaseModelHandler, ModelFactory
 
@@ -11,6 +11,7 @@ class RandomForestConfig(BaseModelConfig):
     max_depth: int | None = None
     n_jobs: int = -1
     verbose: bool = False
+    model_config = ConfigDict(extra="allow")
 
 
 @ModelFactory.register_model("random_forest")

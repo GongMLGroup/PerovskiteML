@@ -1,6 +1,6 @@
 import xgboost as xgb
 from neptune.integrations.xgboost import NeptuneCallback
-from pydantic import Field
+from pydantic import Field, ConfigDict
 from typing import Literal
 from .base import BaseModelConfig, BaseModelHandler, ModelFactory
 
@@ -15,6 +15,7 @@ class XGBoostConfig(BaseModelConfig):
     n_jobs: int = -1
     random_state: int = 42
     verbose: bool = True
+    model_config = ConfigDict(extra="allow")
 
 
 @ModelFactory.register_model("xgboost")
