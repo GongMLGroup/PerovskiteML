@@ -1120,6 +1120,18 @@ wheels = [
 ]
 
 [[package]]
+name = "optuna-integration"
+version = "4.2.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "optuna" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/b6/a8/cb4c69264490b3ce4334db38e6fd6809be71d12d4a91b287d8d21ed1cedd/optuna_integration-4.2.1.tar.gz", hash = "sha256:4abff66014b23c578bd656595769cb446664812b2dfecc0dc2e38af4c03ddc12", size = 84969 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/fb/72/96fb1f0b6c72af7d2a5c3029f864d38eda47150c939510b9a9f5abf143db/optuna_integration-4.2.1-py3-none-any.whl", hash = "sha256:f45c38750cb1a41401731603cd286c8435b0a8baec0c07e63a51fdd5e1ae8031", size = 97587 },
+]
+
+[[package]]
 name = "packaging"
 version = "24.2"
 source = { registry = "https://pypi.org/simple" }
@@ -1170,6 +1182,7 @@ dependencies = [
     { name = "neptune", extra = ["optuna", "xgboost"] },
     { name = "openpyxl" },
     { name = "optuna" },
+    { name = "optuna-integration" },
     { name = "pandas" },
     { name = "pyarrow" },
     { name = "pydantic" },
@@ -1198,6 +1211,7 @@ requires-dist = [
     { name = "neptune", extras = ["optuna", "xgboost"], specifier = ">=1.13.0" },
     { name = "openpyxl", specifier = ">=3.1.5" },
     { name = "optuna", specifier = ">=4.2.0" },
+    { name = "optuna-integration", specifier = ">=4.2.1" },
     { name = "pandas", specifier = ">=2.2.3" },
     { name = "pyarrow", specifier = ">=19.0.0" },
     { name = "pydantic", specifier = ">=2.10.6" },

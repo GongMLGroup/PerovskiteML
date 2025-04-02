@@ -3,7 +3,9 @@ import joblib
 import numpy as np
 from abc import ABC, abstractmethod
 from neptune import Run
+from optuna import Trial
 from pathlib import Path
+from typing import Optional
 from pydantic import BaseModel, Field
 from sklearn.metrics import (
     mean_absolute_error,
@@ -26,9 +28,13 @@ class BaseModelHandler(ABC):
     def fit(self, X_train, y_train, X_val, y_val):
         """Train model with validation data"""
         pass
-    
-    def train(self, X_train, y_train, X_val, y_val, run: Run = None):
-        self.init_callbacks(run)
+
+    def train(self,
+            X_train, y_train, X_val, y_val,
+            run: Optional[Run] = None,
+            trial: Optional[Trial] = None
+        ):
+        self.init_callbacks(run, trial)
         self.fit(X_train, y_train, X_val, y_val)
         self.log_metrics(X_train, y_train, prefix="train", run=run)
         self.log_metrics(X_val, y_val, prefix="val", run=run)
@@ -60,10 +66,12 @@ class BaseModelHandler(ABC):
         instance.model = model
         return instance
 
-    def init_callbacks(self, run: Run = None):
+    def init_callbacks(
+        self, run: Optional[Run] = None, trial: Optional[Trial] = None
+    ):
         """initialize model callbacks"""
         pass
-    
+
     def log_additional_info(self, run: Run = None):
         """Log model-specific information to Neptune"""
         pass

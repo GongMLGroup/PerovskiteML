@@ -15,6 +15,7 @@ dependencies = [
     "neptune[optuna,xgboost]>=1.13.0",
     "openpyxl>=3.1.5",
     "optuna>=4.2.0",
+    "optuna-integration>=4.2.1",
     "pandas>=2.2.3",
     "pyarrow>=19.0.0",
     "pydantic>=2.10.6",

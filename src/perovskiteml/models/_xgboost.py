@@ -1,5 +1,6 @@
 import xgboost as xgb
 from neptune.integrations.xgboost import NeptuneCallback
+from optuna.integration.xgboost import XGBoostPruningCallback
 from pydantic import Field, ConfigDict
 from typing import Literal
 from .base import BaseModelConfig, BaseModelHandler, ModelFactory
@@ -8,6 +9,7 @@ from .base import BaseModelConfig, BaseModelHandler, ModelFactory
 @ModelFactory.register_config("xgboost")
 class XGBoostConfig(BaseModelConfig):
     model_type: Literal["xgboost"] = "xgboost"
+    eval_metric: str = "rmse"
     n_estimators: int = Field(100, ge=1)
     early_stopping_rounds: int | None = None
     eta: float = Field(0.3, ge=0)
@@ -20,6 +22,10 @@ class XGBoostConfig(BaseModelConfig):
 
 @ModelFactory.register_model("xgboost")
 class XGBoostHandler(BaseModelHandler):
+    def __init__(self, config: XGBoostConfig):
+        super().__init__(config)
+        self.config = config
+        
     def fit(self, X_train, y_train, X_val, y_val) -> None:
         self.model = xgb.XGBRegressor(
             **self.config.model_dump(exclude={"model_type", "verbose"}),
@@ -31,8 +37,14 @@ class XGBoostHandler(BaseModelHandler):
             verbose=self.config.verbose
         )
 
-    def init_callbacks(self, run=None) -> None:
+    def init_callbacks(self, run=None, trial=None) -> None:
         if run:
             self.callbacks.append(
                 NeptuneCallback(run=run, log_model=False, log_importance=False)
             )
+        
+        if trial:
+            self.callbacks.append(
+                XGBoostPruningCallback(trial, "validation_1-" + self.config.eval_metric)
+            )
+        

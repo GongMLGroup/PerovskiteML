@@ -83,6 +83,8 @@ def create_run(
     pruner = PrunerFactory.create(config["pruning"])
     preprocessor = Preprocessor(config["process"])
     model = ModelFactory.create(config["model"])
+    if config["hyperparameters"]["pruning"]:
+        model.init_callbacks(trial=trial)
 
     pruner.prune(dataset)
     X, y = dataset.split_target()
@@ -114,7 +116,12 @@ def run(config_path):
 
     with neptune_context(config_dict["logging"]) as neptune_run:
         if neptune_run:
-            neptune_callback = optuna_utils.NeptuneCallback(neptune_run)
+            neptune_callback = optuna_utils.NeptuneCallback(
+                neptune_run,
+                plots_update_freq=10,
+                study_update_freq=10,
+                log_all_trials=False
+            )
         else:
             neptune_callback = None
         study.optimize(
