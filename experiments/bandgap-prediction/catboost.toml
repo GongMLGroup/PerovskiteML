@@ -10,7 +10,7 @@ name = "BGPRED"
 project = "gongjiawei105/PVSK-ML"
 api_token = "${NEPTUNE_API_TOKEN}"
 group_tags = ["bandgap"]
-tags = ["xgboost", "normalized"]
+tags = ["catboost", "normalized"]
 
 [data]
 target_feature = "E_g"
@@ -22,7 +22,4 @@ type = "scale"
 method = "normalize"
 
 [model]
-model_type = "xgboost"
-eta = 0.3        # learning rate
-max_depth = 6
-n_estimators = 100
+model_type = "catboost"

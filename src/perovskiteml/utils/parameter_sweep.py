@@ -6,7 +6,7 @@ def _is_list_of_dicts(value:list) -> bool:
     return all(isinstance(item, dict) for item in value)
 
 class ParameterSweepConfig(BaseModel):
-    type: Literal["float", "int"]
+    type: Literal["float", "int", "categorical"]
     model_config = ConfigDict(extra="allow")
 
 
