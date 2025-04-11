@@ -1,3 +1,4 @@
+import os
 import json
 import joblib
 import numpy as np
@@ -5,6 +6,7 @@ from abc import ABC, abstractmethod
 from neptune import Run
 from optuna import Trial
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Optional
 from pydantic import BaseModel, Field
 from sklearn.metrics import (
@@ -74,6 +76,15 @@ class BaseModelHandler(ABC):
 
     def log_additional_info(self, run: Run = None):
         """Log model-specific information to Neptune"""
+        if run:
+            with TemporaryDirectory() as tmp_file:
+                model_file = os.path.join(
+                    tmp_file, 
+                    f"{self.config.model_type}\\model.joblib"
+                )
+                self.save(tmp_file)
+                print(f"Uploading Model from: {model_file}")
+                run["model"].upload(model_file, wait=True)
         pass
 
     def log_metrics(self, X, y, prefix="val", run: Run = None):
