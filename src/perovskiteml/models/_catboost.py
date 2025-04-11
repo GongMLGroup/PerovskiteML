@@ -1,6 +1,6 @@
 import catboost as cb
 from optuna.integration.catboost import CatBoostPruningCallback
-from pydantic import Field, ConfigDict
+from pydantic import ConfigDict
 from typing import Literal
 from .base import BaseModelConfig, BaseModelHandler, ModelFactory
 

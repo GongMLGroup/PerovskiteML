@@ -1,7 +1,7 @@
 import xgboost as xgb
 from neptune.integrations.xgboost import NeptuneCallback
 from optuna.integration.xgboost import XGBoostPruningCallback
-from pydantic import Field, ConfigDict
+from pydantic import ConfigDict
 from typing import Literal
 from .base import BaseModelConfig, BaseModelHandler, ModelFactory
 
@@ -9,14 +9,10 @@ from .base import BaseModelConfig, BaseModelHandler, ModelFactory
 @ModelFactory.register_config("xgboost")
 class XGBoostConfig(BaseModelConfig):
     model_type: Literal["xgboost"] = "xgboost"
-    eval_metric: str = "rmse"
-    n_estimators: int = Field(100, ge=1)
-    early_stopping_rounds: int | None = None
-    eta: float = Field(0.3, ge=0)
-    max_depth: int = Field(6, ge=1)
     n_jobs: int = -1
     random_state: int = 42
     verbose: bool = True
+    eval_metric: str = "rmse"
     model_config = ConfigDict(extra="allow")
 
 

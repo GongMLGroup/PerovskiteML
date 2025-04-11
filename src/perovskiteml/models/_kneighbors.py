@@ -1,5 +1,5 @@
 from sklearn.neighbors import KNeighborsRegressor
-from pydantic import Field, ConfigDict
+from pydantic import ConfigDict
 from typing import Literal
 from .base import BaseModelConfig, BaseModelHandler, ModelFactory
 
@@ -7,8 +7,6 @@ from .base import BaseModelConfig, BaseModelHandler, ModelFactory
 @ModelFactory.register_config("knn")
 class KNeighborsConfig(BaseModelConfig):
     model_type: Literal["knn"] = "knn"
-    n_neighbors: int = Field(5, ge=1)
-    weights: Literal["uniform", "distance"] = "uniform"
     n_jobs: int = -1
     model_config = ConfigDict(extra="allow")
         
