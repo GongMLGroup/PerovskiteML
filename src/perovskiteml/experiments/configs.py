@@ -17,7 +17,6 @@ class ExperimentConfig(BaseModel):
     process: PreprocessorConfig | None = None
     hyperparameters: OptunaSweepConfig | None = None
     logging: NeptuneConfig = Field(default_factory=NeptuneConfig)
-    config_dict: dict = {}
     
     @classmethod
     def load(cls, config_path: str | Path):
@@ -47,8 +46,7 @@ class ExperimentConfig(BaseModel):
             pruning = pruning_config,
             process = process_config,
             hyperparameters = hyperparameter_config,
-            logging = logging_config,
-            config_dict = config_dict
+            logging = logging_config
         )
         
         
