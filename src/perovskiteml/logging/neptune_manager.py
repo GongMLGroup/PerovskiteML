@@ -6,7 +6,7 @@ from typing import Optional
 
 
 class NeptuneConfig(BaseModel):
-    enabled: bool = True
+    enabled: bool = False
     api_token: Optional[str] = None
     group_tags: list[str] = []
     model_config = ConfigDict(extra="allow")
