@@ -3,6 +3,7 @@ from pydantic import BaseModel, Field
 from ..data import DatasetConfig
 from ..models import ModelFactory, ModelConfig
 from ..preprocessing import PreprocessorConfig, PrunerConfig, PrunerFactory
+from ..validation import ValidatorConfig
 from ..logging import NeptuneConfig
 from ..utils import OptunaSweepConfig, load_config
 
@@ -10,11 +11,13 @@ class ExperimentConfig(BaseModel):
     name: str = "experiment"
     seed: int = 42
     local_save: bool = False
+    test_size: float = 0.1
     verbose: int = 0
     data: DatasetConfig
     model: ModelConfig
     pruning: PrunerConfig | None = None
     process: PreprocessorConfig | None = None
+    validation: ValidatorConfig | None = None
     hyperparameters: OptunaSweepConfig | None = None
     logging: NeptuneConfig = Field(default_factory=NeptuneConfig)
     
@@ -36,6 +39,7 @@ class ExperimentConfig(BaseModel):
             pruning_config = None
         
         process_config = config_dict.get("process")
+        validation_config = config_dict.get("validation")
         hyperparameter_config = config_dict.get("hyperparameters")
         logging_config = config_dict.get("logging", {})
         
@@ -45,6 +49,7 @@ class ExperimentConfig(BaseModel):
             model = model_config,
             pruning = pruning_config,
             process = process_config,
+            validation = validation_config,
             hyperparameters = hyperparameter_config,
             logging = logging_config
         )

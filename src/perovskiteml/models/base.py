@@ -26,7 +26,7 @@ class BaseModelHandler(ABC):
         self.config = config
         self.model = None
         self.callbacks = []
-    
+
     @abstractmethod
     def create_model(self):
         """Create Model with config params"""
@@ -37,17 +37,19 @@ class BaseModelHandler(ABC):
         """Train model with validation data"""
         pass
 
-    def train(self,
-            X_train, y_train, X_val, y_val,
-            cv: Optional[Validator] = None,
-            run: Optional[Run] = None,
-            trial: Optional[Trial] = None
-        ):
-        self.init_callbacks(run, trial)
+    def train(
+        self,
+        X_train, y_train, X_val, y_val,
+        cv: Optional[Validator] = None,
+        run: Optional[Run] = None,
+        trial: Optional[Trial] = None
+    ):
         if cv:
+            self.create_model()
             cv.cross_validate(self, X_train, y_train)
             cv.log_metrics(run["validation"])
         else:
+            self.init_callbacks(run, trial)
             self.fit(X_train, y_train, X_val, y_val)
         self.log_metrics(X_train, y_train, prefix="train", run=run)
         self.log_metrics(X_val, y_val, prefix="val", run=run)
@@ -90,14 +92,14 @@ class BaseModelHandler(ABC):
         if run:
             with TemporaryDirectory() as tmp_file:
                 model_file = os.path.join(
-                    tmp_file, 
+                    tmp_file,
                     f"{self.config.model_type}\\model.joblib"
                 )
                 self.save(tmp_file)
                 print(f"Uploading Model from: {model_file}")
                 run["model"].upload(model_file, wait=True)
         pass
-    
+
     def calculate_metrics(self, X, y):
         predicted = self.predict(X)
         r2 = r2_score(predicted, y)
@@ -106,7 +108,7 @@ class BaseModelHandler(ABC):
         r = np.sqrt(r2)
         rmse = np.sqrt(mse)
         return r2, r, mae, mse, rmse
-    
+
     @staticmethod
     def _log_metrics_to_stdout(
         r2: float, r: float, mae: float, mse: float, rmse: float, prefix: str
@@ -116,7 +118,7 @@ class BaseModelHandler(ABC):
         print(f"MAE on {prefix} Set:", mae)
         print(f"MSE on {prefix} Set:", mse)
         print(f"RMSE on {prefix} Set:", rmse)
-        
+
     @staticmethod
     def _log_metrics_to_neptune(
         r2: float, r: float, mae: float, mse: float, rmse: float, prefix: str, run: Run
@@ -126,7 +128,6 @@ class BaseModelHandler(ABC):
         run[f"metrics/{prefix}/mse"] = mse
         run[f"metrics/{prefix}/r"] = r
         run[f"metrics/{prefix}/rmse"] = rmse
-        
 
     def log_metrics(self, X, y, prefix="val", run: Run = None):
         """Log shared metrics"""
