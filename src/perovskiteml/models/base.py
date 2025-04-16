@@ -48,9 +48,8 @@ class BaseModelHandler(ABC):
             self.create_model()
             cv.cross_validate(self, X_train, y_train)
             cv.log_metrics(run["validation"])
-        else:
-            self.init_callbacks(run, trial)
-            self.fit(X_train, y_train, X_val, y_val)
+        self.init_callbacks(run, trial)
+        self.fit(X_train, y_train, X_val, y_val)
         self.log_metrics(X_train, y_train, prefix="train", run=run)
         self.log_metrics(X_val, y_val, prefix="val", run=run)
         self.log_additional_info(run)

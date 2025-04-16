@@ -2,6 +2,7 @@
 name = "bandgap-predict"
 seed = 42            # Log to neptune
 local_save = false
+test_size = 0.1
 verbose = 1
 
 [logging]
@@ -10,16 +11,16 @@ name = "BGPRED"
 project = "gongjiawei105/PVSK-ML"
 api_token = "${NEPTUNE_API_TOKEN}"
 group_tags = ["bandgap"]
-tags = ["catboost", "normalized"]
+tags = ["catboost"]
 
 [data]
 target_feature = "E_g"
 path = "data/processed/element-composition_band-gap.parquet"
 
-[process]
-[[process.numerical]]
-type = "scale"
-method = "normalize"
-
 [model]
 model_type = "catboost"
+
+[validation]
+method = "kfold"
+n_splits = 10
+metrics = ["r", "mae", "rmse"]
