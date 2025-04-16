@@ -20,11 +20,11 @@ class CatboostHandler(BaseModelHandler):
     def __init__(self, config: CatboostConfig):
         super().__init__(config)
         self.config = config
-        
-    def fit(self, X_train, y_train, X_val, y_val) -> None:
         self.model = cb.CatBoostRegressor(
             **self.config.model_dump(exclude={"model_type"}),
         )
+        
+    def fit(self, X_train, y_train, X_val, y_val) -> None:
         self.model.fit(
             X_train, y_train,
             eval_set=[(X_train, y_train), (X_val, y_val)],
