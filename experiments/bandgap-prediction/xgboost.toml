@@ -10,19 +10,19 @@ name = "BGPRED"
 project = "gongjiawei105/PVSK-ML"
 api_token = "${NEPTUNE_API_TOKEN}"
 group_tags = ["bandgap"]
-tags = ["xgboost", "normalized"]
+tags = ["xgboost"]
 
 [data]
 target_feature = "E_g"
 path = "data/processed/element-composition_band-gap.parquet"
-
-[process]
-[[process.numerical]]
-type = "scale"
-method = "normalize"
 
 [model]
 model_type = "xgboost"
 eta = 0.3        # learning rate
 max_depth = 6
 n_estimators = 100
+
+[validation]
+method = "kfold"
+n_splits = 10
+metrics = ["r", "mae", "rmse"]
