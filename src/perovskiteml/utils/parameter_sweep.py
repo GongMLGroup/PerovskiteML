@@ -2,11 +2,20 @@ import optuna
 from pydantic import BaseModel, ConfigDict
 from typing import Literal, Any
 
-def _is_list_of_dicts(value:list) -> bool:
+
+def _is_list_of_dicts(value: list) -> bool:
     return all(isinstance(item, dict) for item in value)
 
+
+class OptunaSweepConfig(BaseModel):
+    n_trials: int = 100
+    direction: str = "minimize"
+    study_name: str = "optuna_sweep"
+    pruning: bool = False
+
+
 class ParameterSweepConfig(BaseModel):
-    type: Literal["float", "int"]
+    type: Literal["float", "int", "categorical"]
     model_config = ConfigDict(extra="allow")
 
 
@@ -27,7 +36,7 @@ class ParameterSweepHandler:
                 name: cls._generate_params(param)
                 for name, param in step.items()
             } for step in config]
-            
+
         return config
 
     @classmethod
@@ -40,7 +49,7 @@ class ParameterSweepHandler:
             return ParameterSweepConfig(**param)
         elif isinstance(param, list):
             return cls._generate_config(param)
-        
+
         return param
 
     @staticmethod
@@ -77,7 +86,7 @@ class ParameterSweepHandler:
 
         elif isinstance(config, ParameterSweepConfig):
             return cls._suggest_param(trial, name, config)
-        
+
         return config
 
     def suggested_config(self, trial: optuna.Trial) -> dict:

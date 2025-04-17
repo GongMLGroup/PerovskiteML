@@ -1,3 +1,8 @@
+from .base import (
+    DatasetConfig,
+    BaseDataset as Dataset
+)
+
 from .perovskite import (
     DatabaseConfig,
     PerovskiteDatabase
@@ -9,6 +14,10 @@ from .expanded import (
 )
 
 __all__ = [
+    # Base Dataset
+    'DatasetConfig',
+    'Dataset',
+    
     # Perovskite Database
     'DatabaseConfig',
     'PerovskiteDatabase',

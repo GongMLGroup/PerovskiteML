@@ -1,15 +1,20 @@
+import os
 import json
 import joblib
 import numpy as np
 from abc import ABC, abstractmethod
 from neptune import Run
+from optuna import Trial
 from pathlib import Path
-from pydantic import BaseModel, Field
+from tempfile import TemporaryDirectory
+from typing import Optional
+from pydantic import BaseModel
 from sklearn.metrics import (
     mean_absolute_error,
     mean_squared_error,
     r2_score
 )
+from ..validation import Validator
 
 
 class BaseModelConfig(BaseModel):
@@ -23,12 +28,26 @@ class BaseModelHandler(ABC):
         self.callbacks = []
 
     @abstractmethod
+    def create_model(self):
+        """Create Model with config params"""
+        pass
+
+    @abstractmethod
     def fit(self, X_train, y_train, X_val, y_val):
         """Train model with validation data"""
         pass
-    
-    def train(self, X_train, y_train, X_val, y_val, run: Run = None):
-        self.init_callbacks(run)
+
+    def train(
+        self,
+        X_train, y_train, X_val, y_val,
+        cv: Optional[Validator] = None,
+        run: Optional[Run] = None,
+        trial: Optional[Trial] = None
+    ):
+        if cv:
+            self.create_model()
+            cv.cross_validate(self, X_train, y_train)
+            cv.log_metrics(run["validation"] if run else None)
         self.fit(X_train, y_train, X_val, y_val)
         self.log_metrics(X_train, y_train, prefix="train", run=run)
         self.log_metrics(X_val, y_val, prefix="val", run=run)
@@ -60,35 +79,61 @@ class BaseModelHandler(ABC):
         instance.model = model
         return instance
 
-    def init_callbacks(self, run: Run = None):
+    def init_callbacks(
+        self, run: Optional[Run] = None, trial: Optional[Trial] = None
+    ):
         """initialize model callbacks"""
         pass
-    
+
     def log_additional_info(self, run: Run = None):
         """Log model-specific information to Neptune"""
+        if run:
+            with TemporaryDirectory() as tmp_file:
+                model_file = os.path.join(
+                    tmp_file,
+                    f"{self.config.model_type}\\model.joblib"
+                )
+                self.save(tmp_file)
+                print(f"Uploading Model from: {model_file}")
+                run["model"].upload(model_file, wait=True)
         pass
 
-    def log_metrics(self, X, y, prefix="val", run: Run = None):
-        """Log shared metrics"""
+    def calculate_metrics(self, X, y):
         predicted = self.predict(X)
         r2 = r2_score(predicted, y)
         mae = mean_absolute_error(predicted, y)
         mse = mean_squared_error(predicted, y)
         r = np.sqrt(r2)
         rmse = np.sqrt(mse)
+        return r2, r, mae, mse, rmse
 
+    @staticmethod
+    def _log_metrics_to_stdout(
+        r2: float, r: float, mae: float, mse: float, rmse: float, prefix: str
+    ):
         print(f"\nR2 on {prefix} Set:", r2)
         print(f"R value on {prefix} Set:", r)
         print(f"MAE on {prefix} Set:", mae)
         print(f"MSE on {prefix} Set:", mse)
         print(f"RMSE on {prefix} Set:", rmse)
 
+    @staticmethod
+    def _log_metrics_to_neptune(
+        r2: float, r: float, mae: float, mse: float, rmse: float, prefix: str, run: Run
+    ):
+        run[f"metrics/{prefix}/r2"] = r2
+        run[f"metrics/{prefix}/mae"] = mae
+        run[f"metrics/{prefix}/mse"] = mse
+        run[f"metrics/{prefix}/r"] = r
+        run[f"metrics/{prefix}/rmse"] = rmse
+
+    def log_metrics(self, X, y, prefix="val", run: Run = None):
+        """Log shared metrics"""
+        r2, r, mae, mse, rmse = self.calculate_metrics(X, y)
+        self._log_metrics_to_stdout(r2, r, mae, mse, rmse, prefix)
+
         if run:
-            run[f"metrics/{prefix}/r2"] = r2
-            run[f"metrics/{prefix}/mae"] = mae
-            run[f"metrics/{prefix}/mse"] = mse
-            run[f"metrics/{prefix}/r"] = r
-            run[f"metrics/{prefix}/rmse"] = rmse
+            self._log_metrics_to_neptune(r2, r, mae, mse, rmse, prefix, run)
 
 
 class ModelFactory:

@@ -1,0 +1,42 @@
+[experiment]
+name = "bandgap-sweep"
+seed = 42
+local_save = false
+test_size = 0.1
+verbose = 1
+
+[logging]
+enabled = true
+name = "BGSWEEP"
+project = "gongjiawei105/PVSK-ML"
+api_token = "${NEPTUNE_API_TOKEN}"
+group_tags = ["bandgap"]
+tags = ["xgboost", "sweep"]
+
+[hyperparameters]
+pruning = false
+n_trials = 100
+direction = "minimize"
+study_name = "bandgap_opt"
+
+[data]
+target_feature = "E_g"
+path = "data/processed/element-composition_band-gap.parquet"
+
+[model]
+model_type = "xgboost"
+n_estimators = { type = "int", low = 5, high = 100 }
+# n_estimators = 1000
+# early_stopping_rounds = { type = "int", low = 5, high = 50 }
+max_depth = { type = "int", low = 3, high = 12 }
+learning_rate = { type = "float", low = 0.01, high = 0.3 }
+subsample = { type = "float", low = 0.5, high = 1.0}
+min_child_weight = { type = "int", low = 1, high = 10}
+colsample_bytree = { type = "float", low = 0.5, high = 1.0}
+gamma = { type = "float", low = 0.0, high = 0.5}
+verbose = false
+
+[validation]
+method = "kfold"
+n_splits = 5
+metrics = ["r", "mae", "rmse"]

@@ -84,7 +84,7 @@ class Preprocessor:
             )
         ])
         
-    def preprocess(self, X: DataFrame , y: Series) -> tuple[DataFrame, Series]:
+    def preprocess(self, X: DataFrame , y: Series) -> DataFrame:
         data_transformed = DataFrame(self.pipeline.fit_transform(X, y))
         numerical_columns = list(X.select_dtypes(np.number).columns)
         categorical_columns = list(X.select_dtypes([bool, object]).columns)

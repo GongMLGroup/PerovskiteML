@@ -6,7 +6,7 @@ import pyarrow.parquet as pq
 
 from datetime import datetime
 from pathlib import Path
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import Union
 
 
@@ -47,6 +47,16 @@ class DatasetMetadata(BaseModel):
     target_feature: str = ""
     processing_history: list[str] = []
     tags: list[str] = []
+    
+# --------------------------
+# Dataset Config
+# --------------------------
+
+
+class DatasetConfig(BaseModel):
+    target_feature: str | list[str]
+    model_config = ConfigDict(extra="allow")
+    
 
 # --------------------------
 # Base Dataset Class

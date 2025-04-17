@@ -15,7 +15,13 @@ from .reduction import (
 )
 
 from .pruner import (
-    PrunerFactory
+    PrunerFactory,
+    BasePrunerConfig as PrunerConfig
+)
+
+from .preprocessor import (
+    PreprocessorConfig,
+    Preprocessor
 )
 
 __all__ = [
@@ -35,5 +41,9 @@ __all__ = [
     # Pruning
     "PrunerConfig",
     "PrunerFactory",
+    
+    # Preprocessor
+    "PreprocessorConfig",
+    "Preprocessor"
     
 ]

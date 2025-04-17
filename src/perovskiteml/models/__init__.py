@@ -1,5 +1,10 @@
 from .base import (
-    ModelFactory
+    ModelFactory,
+    BaseModelConfig as ModelConfig
+)
+from ._catboost import (
+    CatboostConfig,
+    CatboostHandler
 )
 from ._xgboost import (
     XGBoostConfig,
@@ -22,6 +27,11 @@ from ._random_forest import (
 __all__ = [
     # Base
     "ModelFactory",
+    "ModelConfig",
+    
+    # Catboost
+    "CatboostConfig",
+    "CatboostHandler",
 
     # XGBoost
     "XGBoostConfig",
