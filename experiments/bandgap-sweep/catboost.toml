@@ -1,11 +1,12 @@
 [experiment]
 name = "bandgap-sweep"
-seed = 42            # Log to neptune
-local_save = true
+seed = 42
+test_size = 0.1
+local_save = false
 verbose = 1
 
 [logging]
-enabled = false
+enabled = true
 name = "BGSWEEP"
 project = "gongjiawei105/PVSK-ML"
 api_token = "${NEPTUNE_API_TOKEN}"
@@ -13,8 +14,8 @@ group_tags = ["bandgap"]
 tags = ["catboost", "sweep"]
 
 [hyperparameters]
-pruning = true
-n_trials = 300
+pruning = false
+n_trials = 100
 direction = "minimize"
 study_name = "bandgap_opt"
 
@@ -22,16 +23,9 @@ study_name = "bandgap_opt"
 target_feature = "E_g"
 path = "data/processed/element-composition_band-gap.parquet"
 
-
-[process]
-[[process.numerical]]
-type = "scale"
-method = "normalize"
-# norm = { type = "categorical", choices = ["L1", "L2", "max"] }
-
 [model]
 model_type = "catboost"
-iterations = { type = "int", low = 10, high = 1000 }
+iterations = { type = "int", low = 100, high = 1000 }
 depth = { type = "int", low = 4, high = 10 }
 learning_rate = { type = "float", low = 1e-3, high = 0.3, log = true }
 l2_leaf_reg = { type = "float", low = 1e-5, high = 10, log = true }
@@ -41,3 +35,8 @@ border_count = { type = "int", low = 1, high = 255 }
 od_type = { type = "categorical", choices = ["IncToDec", "Iter"] }
 od_wait = { type = "int", low = 10, high = 50 }
 verbose = false
+
+[validation]
+method = "kfold"
+n_splits = 5
+metrics = ["r", "mae", "rmse"]

@@ -11,7 +11,7 @@ name = "BGPRED"
 project = "gongjiawei105/PVSK-ML"
 api_token = "${NEPTUNE_API_TOKEN}"
 group_tags = ["bandgap"]
-tags = ["catboost"]
+tags = ["catboost", "cv"]
 
 [data]
 target_feature = "E_g"
